@@ -1,0 +1,29 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build renderer
+        run: npm run build
+      - name: Compile C# helpers
+        run: node tools/build-prefs.js
+      - name: Verify packaged helper sources
+        run: |
+          if (!(Test-Path build/MoPrint.PrintPrefs.exe)) { throw "PrintPrefs helper missing" }
+          if (!(Test-Path build/MoPrint.PrintCaps.exe)) { throw "PrintCaps helper missing" }
+          if (!(Test-Path build/MoPrint.PrintJob.exe)) { throw "PrintJob helper missing" }
+        shell: pwsh
