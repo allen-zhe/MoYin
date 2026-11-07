@@ -1,7 +1,7 @@
 # 墨印 MoPrint
 
 **免费、开源、本地优先的打印工作台。**  
-墨印是 MoXu 的续作，遵循 **AGPL-3.0-or-later**，面向打印店、自助打印和日常文件打印场景。
+墨印由 **allen-zhe** 维护，遵循 **AGPL-3.0-or-later**，面向打印店、自助打印和日常文件打印场景。
 
 ![墨印](screens/moprint-097.png)
 
@@ -112,7 +112,7 @@ build/
   license.txt   AGPLv3（安装许可页）
   installer.nsh 安装环境检查
 docs/
-  技术原理与实现说明.md
+  technical-notes.md
 ```
 
 ## 开源协议
@@ -123,8 +123,8 @@ docs/
 
 ## 反馈与后续
 
-- 项目主页：`https://github.com/UserWZ08/MoYin`
-- 问题反馈：`https://github.com/UserWZ08/MoYin/issues/new/choose`
+- 项目主页：`https://github.com/allen-zhe/MoYin`
+- 问题反馈：`https://github.com/allen-zhe/MoYin/issues/new/choose`
 
 仓库地址目前是预留的正式地址；如果之后更换组织或仓库名，只需修改 `src/lib/constants.js` 中的 `GITHUB_URL` / `GITHUB_ISSUES_URL`。
 

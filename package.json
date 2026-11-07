@@ -3,7 +3,7 @@
   "version": "0.9.7",
   "private": true,
   "description": "墨印 MoPrint - 免费开源的本地打印工作台",
-  "author": "MoXu",
+  "author": "allen-zhe",
   "license": "AGPL-3.0-or-later",
   "main": "electron/main.js",
   "scripts": {
@@ -35,7 +35,7 @@
   "build": {
     "appId": "com.moxu.moprint",
     "productName": "墨印",
-    "copyright": "Copyright © 2026 MoXu. AGPL-3.0-or-later.",
+    "copyright": "Copyright © 2026 allen-zhe. AGPL-3.0-or-later.",
     "asar": true,
     "directories": {
       "output": "release"
@@ -112,10 +112,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/UserWZ08/MoYin.git"
+    "url": "https://github.com/allen-zhe/MoYin.git"
   },
   "bugs": {
-    "url": "https://github.com/UserWZ08/MoYin/issues"
+    "url": "https://github.com/allen-zhe/MoYin/issues"
   },
-  "homepage": "https://github.com/UserWZ08/MoYin"
+  "homepage": "https://github.com/allen-zhe/MoYin"
 }

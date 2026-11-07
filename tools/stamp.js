@@ -20,10 +20,10 @@ const fs = require('fs');
       'file-version': '0.9.7.0',
       'product-version': '0.9.7.0',
       'version-string': {
-        CompanyName: 'MoXu',
+        CompanyName: 'allen-zhe',
         FileDescription: '墨印 MoPrint',
         ProductName: '墨印 MoPrint',
-        LegalCopyright: 'Copyright © 2026 MoXu. AGPL-3.0-or-later.',
+        LegalCopyright: 'Copyright © 2026 allen-zhe. AGPL-3.0-or-later.',
         InternalName: 'MoPrint',
         OriginalFilename: '墨印.exe',
       },
