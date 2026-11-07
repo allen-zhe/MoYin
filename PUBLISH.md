@@ -16,7 +16,7 @@ winget install --id GitHub.cli -e
 gh auth login
 ```
 
-然后在项目目录执行（把 `UserWZ08/MoYin` 换成你的账号/仓库名）：
+然后在项目目录执行（把 `allen-zhe/MoYin` 换成你的账号/仓库名）：
 
 ```powershell
 cd D:\DEEPSEEK\Print\cloud-print-assistant
@@ -24,7 +24,7 @@ cd D:\DEEPSEEK\Print\cloud-print-assistant
 git init -b main
 git add .
 git commit -m "墨印 MoPrint 0.9.7"
-gh repo create UserWZ08/MoYin --public --source=. --remote=origin --push
+gh repo create allen-zhe/MoYin --public --source=. --remote=origin --push
 
 gh release create v0.9.7 `
   "release/墨印-0.9.7-安装版.exe" `

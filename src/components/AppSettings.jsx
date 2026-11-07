@@ -132,7 +132,7 @@ export function AppSettings({ open, settings, receive, onClose, onChange, onPick
               </div>
               <Row label="应用版本"><b>{APP_NAME} v{APP_VERSION}</b></Row>
               <Row label="运行平台"><b>Windows · Electron</b></Row>
-              <Row label="项目主页"><button type="button" className="link-inline" onClick={() => window.cloudPrint.openExternal(GITHUB_URL)}>github.com/MoXu/MoPrint <ExternalLink size={12} /></button></Row>
+              <Row label="项目主页"><button type="button" className="link-inline" onClick={() => window.cloudPrint.openExternal(GITHUB_URL)}>{GITHUB_URL.replace('https://', '')} <ExternalLink size={12} /></button></Row>
               <Row label="问题反馈"><button type="button" className="link-inline" onClick={() => window.cloudPrint.openExternal(GITHUB_ISSUES_URL)}><Github size={13} /> 打开 GitHub Issue</button></Row>
               <Row label="标签设置"><Button variant="ghost" size="sm" onClick={onOpenLabel}>打开标签设置</Button></Row>
               <Row label="数据目录"><code>%APPDATA%\moprint</code></Row>
