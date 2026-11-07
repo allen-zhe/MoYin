@@ -1,0 +1,121 @@
+{
+  "name": "moprint",
+  "version": "0.9.7",
+  "private": true,
+  "description": "墨印 MoPrint - 免费开源的本地打印工作台",
+  "author": "MoXu",
+  "license": "AGPL-3.0-or-later",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && node tools/build-prefs.js && electron-builder --win --dir && node tools/stamp.js && electron-builder --win nsis portable --prepackaged release/win-unpacked",
+    "dist:dir": "npm run build && electron-builder --win --dir",
+    "csharp": "node tools/build-prefs.js"
+  },
+  "dependencies": {
+    "busboy": "1.6.0",
+    "chokidar": "3.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.3.4",
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "lucide-react": "0.468.0",
+    "pdfjs-dist": "4.10.38",
+    "png-to-ico": "2.1.8",
+    "qrcode": "1.5.4",
+    "rcedit": "^5.0.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "sharp": "0.33.5",
+    "vite": "5.4.11"
+  },
+  "build": {
+    "appId": "com.moxu.moprint",
+    "productName": "墨印",
+    "copyright": "Copyright © 2026 MoXu. AGPL-3.0-or-later.",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.png",
+      "build/icon.ico",
+      "LICENSE",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "build/MoPrint.PrintPrefs.exe",
+        "to": "print-prefs.exe"
+      },
+      {
+        "from": "build/MoPrint.PrintCaps.exe",
+        "to": "print-caps.exe"
+      },
+      {
+        "from": "build/MoPrint.PrintJob.exe",
+        "to": "print-job.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "artifactName": "墨印-${version}-${name}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "墨印",
+      "license": "build/license.txt",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "墨印-${version}-安装版.${ext}",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "墨印-${version}-便携版.${ext}"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UserWZ08/MoYin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UserWZ08/MoYin/issues"
+  },
+  "homepage": "https://github.com/UserWZ08/MoYin"
+}

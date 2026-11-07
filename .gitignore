@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+.vite/
+*.log
+*.tmp
+*.pdb
+*.nupkg
+.DS_Store
+Thumbs.db
+build/MoPrint.PrintPrefs.exe
+build/MoPrint.PrintCaps.exe
+build/MoPrint.PrintJob.exe
+.idea/
+.vscode/
