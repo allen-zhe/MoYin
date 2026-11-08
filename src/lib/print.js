@@ -11,6 +11,10 @@ const PAPER_MM = {
   A3: { w: 297, h: 420 },
   A5: { w: 148, h: 210 },
   Letter: { w: 215.9, h: 279.4 },
+  '5寸': { w: 89, h: 127 },
+  '6寸': { w: 102, h: 152 },
+  '7寸': { w: 127, h: 178 },
+  '8寸': { w: 152, h: 203 },
 };
 
 export function paperSize(item, landscape) {

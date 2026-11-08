@@ -5,7 +5,12 @@ import { money } from '../lib/format.js';
 import { printerFor, capabilitySummary, supportsPaper } from '../lib/printerCaps.js';
 
 const COLOR_OPTIONS = [{ value: 'mono', label: '黑白' }, { value: 'color', label: '彩色' }];
-const PAPER_OPTIONS = ['A4', 'A3', 'A5', 'Letter'];
+const PAPER_OPTIONS = [
+  { value: 'A4', label: 'A4' }, { value: 'A3', label: 'A3' }, { value: 'A5', label: 'A5' },
+  { value: 'Letter', label: 'Letter' }, { value: '5寸', label: '5寸 (3.5×5)' },
+  { value: '6寸', label: '6寸 (4×6)' }, { value: '7寸', label: '7寸 (5×7)' },
+  { value: '8寸', label: '8寸 (6×8)' },
+];
 const DUPLEX_OPTIONS = [
   { value: 'simplex', label: '单面' },
   { value: 'shortEdge', label: '双面短边翻页' },
@@ -251,7 +256,7 @@ export function PrintSettings({ open, state, items, printers, onClose, onUpdateI
                 </td>
                 <td>
                   <select className="cell-select" value={item.paper} onChange={(e) => onUpdateItem?.(item.id, { paper: e.target.value })}>
-                    {PAPER_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                    {PAPER_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </td>
                 <td>

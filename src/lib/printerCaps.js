@@ -3,6 +3,17 @@ const PAPER_MM = {
   A3: [297, 420],
   A5: [148, 210],
   Letter: [215.9, 279.4],
+  '5寸': [89, 127],
+  '6寸': [102, 152],
+  '7寸': [127, 178],
+  '8寸': [152, 203],
+};
+
+const PAPER_ALIASES = {
+  '5寸': ['5寸', '3.5 X 5', '9 X 13', '9X13'],
+  '6寸': ['6寸', '4 X 6', '10 X 15', '4X6', '10X15'],
+  '7寸': ['7寸', '5 X 7', '13 X 18', '5X7', '13X18'],
+  '8寸': ['8寸', '6 X 8', '15 X 20', '6X8', '15X20'],
 };
 
 const INCH = 100;
@@ -12,6 +23,7 @@ function paperMatches(cap, name) {
   if (!cap) return false;
   const capName = String(cap.name || '').toUpperCase();
   if (capName.includes(paper)) return true;
+  if ((PAPER_ALIASES[paper] || []).some((alias) => capName.includes(alias))) return true;
   const mm = PAPER_MM[paper];
   if (!mm) return false;
   const w = Math.round((mm[0] / 25.4) * INCH);
