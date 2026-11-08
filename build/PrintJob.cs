@@ -122,10 +122,23 @@ internal static class PrintJob
     private static PaperSize FindPaper(PrinterSettings settings, string name, bool landscape)
     {
         string wanted = string.IsNullOrWhiteSpace(name) ? "A4" : name.Trim().ToUpperInvariant();
+        string[] aliases;
+        switch (wanted)
+        {
+            case "5寸": aliases = new[] { "5寸", "3.5 X 5", "9 X 13" }; break;
+            case "6寸": aliases = new[] { "6寸", "4 X 6", "10 X 15" }; break;
+            case "7寸": aliases = new[] { "7寸", "5 X 7", "13 X 18" }; break;
+            case "8寸": aliases = new[] { "8寸", "6 X 8", "15 X 20" }; break;
+            default: aliases = new[] { wanted }; break;
+        }
         foreach (PaperSize paper in settings.PaperSizes)
         {
-            if (paper.PaperName != null && paper.PaperName.ToUpperInvariant().Contains(wanted))
-                return paper;
+            if (paper.PaperName == null) continue;
+            string paperName = paper.PaperName.ToUpperInvariant();
+            foreach (string alias in aliases)
+            {
+                if (paperName.Contains(alias)) return paper;
+            }
         }
 
         // Exact fallbacks in hundredths of an inch.
@@ -133,6 +146,10 @@ internal static class PrintJob
         {
             case "A3": return new PaperSize("A3", 1169, 1654);
             case "A5": return new PaperSize("A5", 583, 827);
+            case "5寸": return new PaperSize("9x13cm", 350, 500);
+            case "6寸": return new PaperSize("10x15cm", 400, 600);
+            case "7寸": return new PaperSize("13x18cm", 500, 700);
+            case "8寸": return new PaperSize("15x20cm", 600, 800);
             case "LETTER": return new PaperSize("Letter", 850, 1100);
             default: return new PaperSize("A4", 827, 1169);
         }

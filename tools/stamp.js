@@ -17,8 +17,8 @@ const fs = require('fs');
     }
     await rcedit(exe, {
       icon,
-      'file-version': '0.9.8.0',
-      'product-version': '0.9.8.0',
+      'file-version': '0.9.9.0',
+      'product-version': '0.9.9.0',
       'version-string': {
         CompanyName: 'allen-zhe',
         FileDescription: '墨印 MoPrint',
