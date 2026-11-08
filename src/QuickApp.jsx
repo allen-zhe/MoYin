@@ -31,7 +31,7 @@ export function QuickApp() {
         setQuick(boot.state.quick || quick);
         const scheme = boot.state.schemes.find((s) => s.id === boot.state.activeSchemeId) || boot.state.schemes[0];
         setItems(scheme.items.slice(0, 12));
-        setPrinters(await window.cloudPrint.listPrinters());
+        setPrinters(withVirtualPrinter(await window.cloudPrint.listPrinters()));
       } catch (err) {
         notify(err.message || '启动失败', 'error');
       }
@@ -58,7 +58,7 @@ export function QuickApp() {
       const amount = Math.round(amountForPages(prepared.pages, item) * copies * 100) / 100;
       setPrinting((prev) => ({ ...prev, percent: 82, stage: 'spooling', title: '正在发送到打印机' }));
       const result = await executePrint({
-        html: prepared.html, images: prepared.images, item, copies, paper: prepared.paper, landscape: prepared.landscape,
+        html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
         simulate: stateRef.current.settings.simulatePrint, jobId: uid('t_'),
         onProgress: (p) => setPrinting((prev) => ({ ...prev, ...p })),
       });

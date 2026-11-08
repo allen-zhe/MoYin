@@ -2,9 +2,9 @@
 
 当前发布包位于 `release/`：
 
-- `墨印-0.9.7-安装版.exe`
-- `墨印-0.9.7-便携版.exe`
-- `墨印-0.9.7-源码.zip`
+- `墨印-0.9.8-安装版.exe`
+- `墨印-0.9.8-便携版.exe`
+- `墨印-0.9.8-源码.zip`
 
 ## 第一次发布
 
@@ -23,14 +23,14 @@ cd D:\DEEPSEEK\Print\cloud-print-assistant
 
 git init -b main
 git add .
-git commit -m "墨印 MoPrint 0.9.7"
+git commit -m "墨印 MoPrint 0.9.8"
 gh repo create allen-zhe/MoYin --public --source=. --remote=origin --push
 
-gh release create v0.9.7 `
-  "release/墨印-0.9.7-安装版.exe" `
-  "release/墨印-0.9.7-便携版.exe" `
-  "release/墨印-0.9.7-源码.zip" `
-  --title "墨印 MoPrint 0.9.7" `
+gh release create v0.9.8 `
+  "release/墨印-0.9.8-安装版.exe" `
+  "release/墨印-0.9.8-便携版.exe" `
+  "release/墨印-0.9.8-源码.zip" `
+  --title "墨印 MoPrint 0.9.8" `
   --notes-file CHANGELOG.md
 ```
 

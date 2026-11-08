@@ -13,6 +13,7 @@ const POSITIONS = [
 
 export function LabelSettings({ open, settings, printers, onClose, onChange, onPrintTest, onOpenPreferences }) {
   const [qr, setQr] = useState('');
+  const nativePrinters = (printers || []).filter((p) => !p.virtual);
   const [busy, setBusy] = useState(false);
   const sample = useMemo(() => ({
     short: 'A1B2C3D4',
@@ -51,13 +52,13 @@ export function LabelSettings({ open, settings, printers, onClose, onChange, onP
           <section className="label-section">
             <h4>打印机</h4>
             <div className="label-printer-row">
-              <Select value={settings.labelPrinter || ''} onChange={(e) => update({ labelPrinter: e.target.value })} title={capabilitySummary(printerFor(printers, settings.labelPrinter))}>
+              <Select value={settings.labelPrinter || ''} onChange={(e) => update({ labelPrinter: e.target.value })} title={capabilitySummary(printerFor(nativePrinters, settings.labelPrinter))}>
                 <option value="">系统默认打印机</option>
-                {printers.map((p) => <option key={p.name} value={p.name}>{p.displayName}</option>)}
+                {nativePrinters.map((p) => <option key={p.name} value={p.name}>{p.displayName}</option>)}
               </Select>
               <Button variant="ghost" size="sm" onClick={() => onOpenPreferences?.(settings.labelPrinter || '')}>首选项</Button>
             </div>
-            <span className="label-cap">{capabilitySummary(printerFor(printers, settings.labelPrinter))}</span>
+            <span className="label-cap">{capabilitySummary(printerFor(nativePrinters, settings.labelPrinter))}</span>
             <div className="label-index-card">
               <div>
                 <b>文档打印机序号</b>

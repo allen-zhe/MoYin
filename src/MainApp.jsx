@@ -28,6 +28,7 @@ import { getPdfPageCount } from './lib/pdf.js';
 import { labelDataForStack, labelPageHtml, makeQr } from './lib/label.js';
 import { createErpAdapter } from './lib/erp.js';
 import { validateItem, validateLabelPaper, assignPrintersToItems, choosePrinter } from './lib/printerCaps.js';
+import { VIRTUAL_PDF_NAME, withVirtualPrinter } from './lib/virtualPrinter.js';
 import { GITHUB_ISSUES_URL } from './lib/constants.js';
 
 const RANGE_MS = { '10m': 10 * 60 * 1000, '30m': 30 * 60 * 1000, '1h': 60 * 60 * 1000 };
@@ -93,7 +94,7 @@ export function MainApp() {
         if (!alive) return;
         setState(data.state);
         setBoot({ loading: false, error: '', version: data.version, simulate: !!data.simulate, paths: data.paths });
-        setPrinters(data.printers || []);
+        setPrinters(withVirtualPrinter(data.printers || []));
         setReceive(data.receive || { running: false });
         bootedRef.current = true;
         const first = data.state.stacks?.find((s) => !s.archived) || data.state.stacks?.[0];
@@ -119,12 +120,12 @@ export function MainApp() {
   const loadPrinters = useCallback(async () => {
     try {
       const list = await window.cloudPrint.listPrinters();
-      setPrinters(Array.isArray(list) ? list : []);
+      setPrinters(withVirtualPrinter(Array.isArray(list) ? list : []));
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    if (!state || !printers.length) return;
+    if (!state || !printers.some((p) => !p.virtual)) return;
     if ((state.settings.printerAssignVersion || 0) >= 1) return;
     setState((prev) => {
       if (!prev || (prev.settings.printerAssignVersion || 0) >= 1) return prev;
@@ -279,6 +280,7 @@ export function MainApp() {
   const defaultPrinter = printers.find((p) => p.isDefault) || printers[0];
 
   const openPrinterPreferences = useCallback(async (name) => {
+    if (name === VIRTUAL_PDF_NAME) return notify('PDF 检查机是应用内虚拟输出，不需要驱动首选项。', 'info');
     const res = await window.cloudPrint.openPrinterPreferences?.(name || '');
     if (!res?.ok) notify(res?.error || '无法打开打印机首选项，请确认已安装打印机驱动。', 'error');
   }, [notify]);
@@ -747,10 +749,11 @@ export function MainApp() {
       const coverage = prepared.coverage || 0;
       setPrinting((prev) => prev ? ({ ...prev, stage: 'spooling', percent: 80, title: '正在发送到打印机', detail: `${task.printer} · 覆盖率 ${(coverage * 100).toFixed(1)}%` }) : prev);
       const result = await executePrint({
-        html: prepared.html, images: prepared.images, item, copies, paper: prepared.paper, landscape: prepared.landscape,
+        html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
         simulate: state.settings.simulatePrint || boot.simulate, jobId,
         onProgress: (p) => setPrinting((prev) => prev ? ({ ...prev, ...p }) : prev),
       });
+      if (result?.canceled) { setPrinting(null); return; }
       if (!result?.ok) throw new Error(result?.error || '打印失败');
       const now = Date.now();
       setState((prev) => {
@@ -793,7 +796,8 @@ export function MainApp() {
       });
       playTone('ok');
       if (targetStack) syncErpOrder({ ...targetStack, printedAt: now, frozenAmount: (Number(targetStack.frozenAmount) || 0) + amount, payment: state.settings.autoPayment ? 'paid' : (targetStack.payment === 'paid' ? 'paid' : 'unpaid') }, item, amount);
-      notify(`已发送 ${prepared.pages} 页 · 覆盖率 ${(coverage * 100).toFixed(1)}%`, 'success');
+      if (result.virtual) notify(`检查 PDF 已保存：${result.pdfPath}`, 'success');
+      else notify(`已发送 ${prepared.pages} 页 · 覆盖率 ${(coverage * 100).toFixed(1)}%`, 'success');
       setPrinting((prev) => prev ? ({ ...prev, stage: 'done', percent: 100, title: '打印任务已提交', detail: result.simulated ? '模拟打印完成' : '系统打印队列已接收' }) : prev);
       setTimeout(() => setPrinting(null), 900);
       if (targetStack && state.settings.splitReminder) {
@@ -853,9 +857,10 @@ export function MainApp() {
       const printItem = { ...item, duplex: payload.mode === 'booklet' ? 'longEdge' : 'simplex' };
       const html = sheetsToHtml(payload.sheets, payload.paper, payload.landscape);
       const result = await executePrint({
-        html, images: payload.sheets.map((s) => s.dataUrl), item: printItem, copies: 1, paper: payload.paper, landscape: payload.landscape,
+        html, images: payload.sheets.map((s) => s.dataUrl), orientations: payload.sheets.map(() => !!payload.landscape), item: printItem, copies: 1, paper: payload.paper, landscape: payload.landscape,
         simulate: state.settings.simulatePrint || boot.simulate, jobId,
       });
+      if (result?.canceled) { setPrinting(null); return; }
       if (!result?.ok) throw new Error(result?.error || '打印失败');
       const now = Date.now();
       setState((prev) => {
@@ -877,6 +882,7 @@ export function MainApp() {
         };
       });
       setImposition(null);
+      if (result.virtual) notify(`检查 PDF 已保存：${result.pdfPath}`, 'success');
       notify(`拼版打印已发送 ${payload.sheets.length} 页 · 覆盖率 ${((payload.coverage || 0) * 100).toFixed(1)}%`, 'success');
       setPrinting((prev) => prev ? ({ ...prev, stage: 'done', percent: 100, title: '拼版打印已提交' }) : prev);
       setTimeout(() => setPrinting(null), 900);

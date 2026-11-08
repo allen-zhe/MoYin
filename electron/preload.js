@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('cloudPrint', {
   erpRequest: (payload) => ipcRenderer.invoke('erp:request', payload),
   printHtml: (job) => ipcRenderer.invoke('print:html', job),
   printImages: (job) => ipcRenderer.invoke('print:images', job),
+  exportPdf: (job) => ipcRenderer.invoke('pdf:export', job),
   receiveInfo: () => ipcRenderer.invoke('receive:info'),
   startReceive: (port) => ipcRenderer.invoke('receive:start', port),
   stopReceive: () => ipcRenderer.invoke('receive:stop'),

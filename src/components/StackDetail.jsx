@@ -208,7 +208,7 @@ export function StackDetail({
               <b>{stack.title}</b>
               <span>· 已选 {selectedFiles.length} 个文件 · {copies} 份 · 共 {totalPages} 页</span>
               <span className="summary-amount">已选中金额 {money(estimate)} <em>（当前方案价）</em></span>
-              {item ? <span className="summary-config">· {item.name} · {item.printer || printers.find((p) => p.isDefault)?.displayName || '系统默认打印机'}</span> : null}
+              {item ? <span className="summary-config">· {item.name} · {printers.find((p) => p.name === item.printer)?.displayName || item.printer || printers.find((p) => p.isDefault)?.displayName || '系统默认打印机'}</span> : null}
               {stack.coverage ? <span className="summary-config">· 覆盖率 {(stack.coverage * 100).toFixed(1)}%</span> : null}
             </div>
             <div className="detail-print-controls">

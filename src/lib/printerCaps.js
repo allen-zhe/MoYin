@@ -21,6 +21,7 @@ function paperMatches(cap, name) {
 }
 
 export function isVirtualPrinter(printer) {
+  if (printer?.virtual) return true;
   const name = String(printer?.name || printer?.displayName || '');
   return /microsoft\s+(print\s+to\s+pdf|xps)|onenote|send\s+to|fax|adobe\s+pdf|pdf24|cutepdf|dopdf|moprint/i.test(name);
 }
