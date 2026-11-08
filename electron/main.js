@@ -11,6 +11,7 @@ const { pathToFileURL } = require('url');
 const { read: readState, save: saveState, flush: flushStore, dataDir } = require('./store');
 const { printHtml, printImages, imagesToHtml, listPrinters, listStatus } = require('./printer');
 const { ReceiveServer } = require('./receiver');
+const { exportImagesPdf } = require('./pdfExport');
 const chokidar = require('chokidar');
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -317,6 +318,21 @@ function registerIpc() {
   ipcMain.handle('state:save', (_e, state) => {
     const saved = saveState(state);
     return { ok: true, updatedAt: saved.updatedAt };
+  });
+
+  ipcMain.handle('pdf:export', async (_e, job) => {
+    const name = `墨印-检查-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`;
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '保存检查 PDF',
+      defaultPath: path.join(app.getPath('downloads'), name),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+    try {
+      return await exportImagesPdf(job, result.filePath);
+    } catch (err) {
+      return { ok: false, error: err.message || String(err) };
+    }
   });
 
   ipcMain.handle('printers:list', () => listStatus(mainWindow));

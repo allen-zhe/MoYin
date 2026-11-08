@@ -13,7 +13,10 @@ export function QuickPanel({
   onOpenWindow, onClear, onCopies, onOpenSettings, onReorder, onDropStack, compact = false,
 }) {
   const [dragSlot, setDragSlot] = useState(-1);
-  const displayPrinter = (item) => item?.printer || printers.find((p) => p.isDefault)?.displayName || printers[0]?.displayName || '系统默认打印机';
+  const displayPrinter = (item) => {
+    const exact = item?.printer ? printers.find((p) => p.name === item.printer || p.displayName === item.printer) : null;
+    return exact?.displayName || printers.find((p) => p.isDefault)?.displayName || printers[0]?.displayName || '系统默认打印机';
+  };
 
   return (
     <aside className={`quick-panel ${compact ? 'compact' : ''}`}>

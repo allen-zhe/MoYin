@@ -16,6 +16,7 @@ internal sealed class JobConfig
     public string duplex { get; set; }
     public int copies { get; set; }
     public List<string> images { get; set; }
+    public List<bool> orientations { get; set; }
     public string outputFile { get; set; }
 }
 
@@ -80,6 +81,16 @@ internal static class PrintJob
                 doc.DefaultPageSettings.Landscape = cfg.landscape;
                 doc.DefaultPageSettings.Color = cfg.color;
                 doc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+                int orientationIndex = 0;
+                doc.QueryPageSettings += (sender, e) =>
+                {
+                    bool landscape = cfg.landscape;
+                    if (cfg.orientations != null && cfg.orientations.Count > 0)
+                        landscape = cfg.orientations[Math.Min(orientationIndex, cfg.orientations.Count - 1)];
+                    e.PageSettings.Landscape = landscape;
+                    orientationIndex += 1;
+                };
 
                 int index = 0;
                 doc.PrintPage += (sender, e) =>

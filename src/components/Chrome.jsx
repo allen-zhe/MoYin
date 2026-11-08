@@ -18,7 +18,7 @@ export function TitleBar({ version }) {
       <div className="titlebar-brand">
         <Logo size={19} />
         <span>墨印</span>
-        <span className="titlebar-ver">V{version || '0.9.7'}</span>
+        <span className="titlebar-ver">V{version || '0.9.8'}</span>
       </div>
       <div className="titlebar-actions" onDoubleClick={(e) => e.stopPropagation()}>
         <button type="button" aria-label="最小化" title="最小化" onClick={() => window.cloudPrint.window.minimize()}>

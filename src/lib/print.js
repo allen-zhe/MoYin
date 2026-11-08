@@ -1,5 +1,6 @@
 import { renderPdfPages, renderImagePage, isPdf, isImage, toLocalUrl } from './pdf.js';
 import { filePages } from './format.js';
+import { VIRTUAL_PDF_NAME } from './virtualPrinter.js';
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -85,7 +86,6 @@ export async function preparePrint(files, item, options = {}) {
   const fileSummaries = [];
   let coverageWeight = 0;
   let coverageArea = 0;
-  let firstRatio = 0;
 
   for (let fi = 0; fi < files.length; fi += 1) {
     const file = files[fi];
@@ -105,7 +105,6 @@ export async function preparePrint(files, item, options = {}) {
     }
     const filtered = skipBlank ? rendered.filter((p) => !p.blank) : rendered;
     if (!filtered.length) continue;
-    if (!firstRatio && filtered[0].width && filtered[0].height) firstRatio = filtered[0].width / filtered[0].height;
     fileSummaries.push({ ...file, printedPages: filtered.length });
     for (const p of filtered) {
       pages.push({ ...p, fileId: file.id, fileName: file.name });
@@ -116,7 +115,9 @@ export async function preparePrint(files, item, options = {}) {
   }
 
   if (!pages.length) throw new Error('没有可打印的页面。');
-  const landscape = item.orientation === 'landscape' || (item.orientation !== 'portrait' && firstRatio > 1.12);
+  const forced = item.orientation === 'landscape' ? true : item.orientation === 'portrait' ? false : null;
+  const orientations = pages.map((p) => forced === null ? (p.width > p.height * 1.12) : forced);
+  const landscape = orientations[0];
   const size = paperSize(item, landscape);
   const pageCss = `${size.w}mm ${size.h}mm`;
   const objectFit = item.scale === 'fill' ? 'cover' : item.scale === 'actual' ? 'none' : 'contain';
@@ -146,6 +147,7 @@ ${pages.map((p, i) => `<div class="sheet"><img src="${p.dataUrl}" alt="" style="
     files: fileSummaries,
     paper: item.paper || 'A4',
     landscape,
+    orientations,
     pageCss,
     copies: Math.max(1, Number(copies) || 1),
     coverage: coverageArea ? coverageWeight / coverageArea : 0,
@@ -164,7 +166,17 @@ export function sheetsToHtml(sheets, paper, landscape) {
   </style></head><body>${sheets.map((s) => `<div class="sheet"><img src="${s.dataUrl}" alt=""></div>`).join('')}</body></html>`;
 }
 
-export async function executePrint({ html, images, item, copies, paper, landscape, simulate, jobId }) {
+export async function executePrint({ html, images, orientations, item, copies, paper, landscape, simulate, jobId }) {
+  if (item?.printer === VIRTUAL_PDF_NAME) {
+    return window.cloudPrint.exportPdf({
+      images,
+      orientations,
+      copies,
+      pageSize: paper || item.paper || 'A4',
+      landscape: !!landscape,
+      item,
+    });
+  }
   if (images?.length && window.cloudPrint.printImages) {
     const result = await window.cloudPrint.printImages({
       images,
@@ -176,6 +188,7 @@ export async function executePrint({ html, images, item, copies, paper, landscap
       duplex: item.duplex || 'simplex',
       color: item.color !== 'mono',
       landscape: !!landscape,
+      orientations: orientations || [],
       simulate: !!simulate,
     });
     if (result && result.ok) return result;

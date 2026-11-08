@@ -102,6 +102,7 @@ async function printImages(job, context = {}) {
       printer: printerName,
       paper: job.pageSize || job.item?.paper || 'A4',
       landscape: !!job.landscape,
+      orientations: Array.isArray(job.orientations) ? job.orientations : [],
       color: job.color !== undefined ? !!job.color : job.item?.color !== 'mono',
       duplex: job.duplex || job.item?.duplex || 'simplex',
       copies: Math.max(1, Math.min(99, Number(job.copies) || 1)),
