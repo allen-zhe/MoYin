@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Layers3, BookOpen, Grid2X2, Repeat2, Scissors, Printer, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Layers3, BookOpen, Grid2X2, Repeat2, Scissors, Printer, RefreshCw, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Modal, Button, Select, Spinner, Segmented } from './ui.jsx';
 import { renderFilePages } from '../lib/print.js';
 import { isImage } from '../lib/pdf.js';
@@ -26,6 +26,7 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [sourcePages, setSourcePages] = useState([]);
+  const [pageIndex, setPageIndex] = useState(0);
   const runRef = useRef(0);
 
   const images = useMemo(() => (files || []).filter((f) => isImage(f)), [files]);
@@ -48,6 +49,7 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
     setSheets([]);
     setError('');
     setSourcePages([]);
+    setPageIndex(0);
     generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, paper, landscape, overlap, nup, rows, cols, sourceIndex]);
@@ -98,6 +100,7 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
 
   const modeInfo = MODES.find((m) => m.id === mode);
   const coverage = coverageOf(sheets);
+  const idx = Math.max(0, Math.min(pageIndex, sheets.length - 1));
 
   return (
     <Modal
@@ -232,11 +235,15 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
           <div className="imposition-page-stage">
             {busy ? <div className="imposition-empty"><Spinner size={24} /><span>正在渲染页面…</span></div> : null}
             {!busy && error ? <div className="imposition-empty error"><AlertTriangle size={26} /><b>无法生成</b><span>{error}</span></div> : null}
-            {!busy && !error && sheets[0] ? <img src={sheets[0].dataUrl} alt="拼版预览" /> : null}
+            {!busy && !error && sheets[idx] ? <img key={idx} src={sheets[idx].dataUrl} alt={`拼版预览 第 ${idx + 1} 张`} /> : null}
             {!busy && !error && !sheets[0] ? <div className="imposition-empty"><Layers3 size={30} /><span>选择模板后生成预览</span></div> : null}
           </div>
           <div className="imposition-preview-foot">
-            <span>{sheets.length ? `第 1 / ${sheets.length} 张` : '—'}</span>
+            <div className="imposition-pager">
+              <button type="button" className="pager-btn" disabled={idx <= 0} onClick={() => setPageIndex((i) => Math.max(0, i - 1))} aria-label="上一页"><ChevronLeft size={15} /></button>
+              <span>{sheets.length ? `第 ${idx + 1} / ${sheets.length} 张` : '—'}</span>
+              <button type="button" className="pager-btn" disabled={idx >= sheets.length - 1} onClick={() => setPageIndex((i) => Math.min(sheets.length - 1, i + 1))} aria-label="下一页"><ChevronRight size={15} /></button>
+            </div>
             <span>{files?.length || 0} 个源文件 · {sourcePages.length || sheets.length} 页</span>
           </div>
         </div>

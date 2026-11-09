@@ -1,6 +1,6 @@
 export const APP_NAME = '墨印';
 export const APP_NAME_EN = 'MoPrint';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
 export const APP_TAGLINE = '免费开源 · 本地打印工作台';
 export const GITHUB_URL = 'https://github.com/allen-zhe/MoYin';
 export const GITHUB_ISSUES_URL = 'https://github.com/allen-zhe/MoYin/issues/new/choose';
