@@ -857,7 +857,7 @@ export function MainApp() {
       const printItem = { ...item, duplex: payload.mode === 'booklet' ? 'longEdge' : 'simplex' };
       const html = sheetsToHtml(payload.sheets, payload.paper, payload.landscape);
       const result = await executePrint({
-        html, images: payload.sheets.map((s) => s.dataUrl), orientations: payload.sheets.map(() => !!payload.landscape), item: printItem, copies: 1, paper: payload.paper, landscape: payload.landscape,
+        html, images: payload.sheets.map((s) => s.dataUrl), orientations: payload.sheets.map((s) => (s.width || 0) > (s.height || 0)), item: printItem, copies: 1, paper: payload.paper, landscape: payload.landscape,
         simulate: state.settings.simulatePrint || boot.simulate, jobId,
       });
       if (result?.canceled) { setPrinting(null); return; }
