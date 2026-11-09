@@ -65,7 +65,7 @@ npm run dist         # 生成安装版 + 便携版
 
 ## 安装版
 
-安装包位于 `release/墨印-1.0.0-安装版.exe`：
+安装包位于 `release/墨印-1.0.1-安装版.exe`：
 
 - 显示 AGPLv3 许可页，必须同意后才能继续；
 - 可自由选择安装目录；
@@ -73,7 +73,7 @@ npm run dist         # 生成安装版 + 便携版
 - 安装时静默尝试启动 Windows 打印后台服务并创建 `%APPDATA%\moprint` 数据目录；
 - Electron 自带 Chromium/Node 运行时，无需额外安装 WebView2 或 .NET。
 
-便携版：`release/墨印-1.0.0-便携版.exe`，双击运行。
+便携版：`release/墨印-1.0.1-便携版.exe`，双击运行。
 
 ## 手机传输
 
