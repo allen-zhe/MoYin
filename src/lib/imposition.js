@@ -83,18 +83,27 @@ export async function composePages(pages, mode, options = {}) {
   const gap = MM(3);
   const src = pages.map((p) => p.dataUrl);
 
-  if (mode === 'a4-to-a3') {
-    const out = paperPx('A3', true);
+  if (mode === 'a3' || mode === 'a4-to-a3') {
     const sheets = [];
     for (let i = 0; i < src.length; i += 2) {
-      const p = makePage('A3', true);
-      const cellW = (out.width - margin * 2 - gap) / 2;
-      const cellH = out.height - margin * 2;
+      // Two A4 pages per A3 sheet. Portrait sources sit side by side on an
+      // A3 landscape sheet; landscape sources stack top/bottom on A3 portrait.
+      const pageW = pages[i]?.width || 0;
+      const pageH = pages[i]?.height || 0;
+      const srcLandscape = pageW > pageH * 1.12;
+      const p = makePage('A3', !srcLandscape);
+      const cellW = srcLandscape
+        ? p.width - margin * 2
+        : (p.width - margin * 2 - gap) / 2;
+      const cellH = srcLandscape
+        ? (p.height - margin * 2 - gap) / 2
+        : p.height - margin * 2;
       for (let j = 0; j < 2; j += 1) {
         const data = src[i + j];
         if (!data) continue;
         const img = await loadImage(data);
-        drawFit(p.ctx, img, margin + j * (cellW + gap), margin, cellW, cellH);
+        if (srcLandscape) drawFit(p.ctx, img, margin, margin + j * (cellH + gap), cellW, cellH);
+        else drawFit(p.ctx, img, margin + j * (cellW + gap), margin, cellW, cellH);
       }
       sheets.push(finishSheet(p));
     }
@@ -141,10 +150,16 @@ export async function composePages(pages, mode, options = {}) {
     return [finishSheet(p)];
   }
 
-  // n-up: 2 / 4 / 6 / 9
+  // n-up: 2 / 4 / 6 / 9. The grid follows the sheet orientation so a
+  // portrait 2-up stacks pages top/bottom while a landscape 2-up places
+  // them side by side.
   const n = [2, 4, 6, 9].includes(Number(options.nup)) ? Number(options.nup) : 4;
-  const cols = n === 2 ? 2 : n === 6 ? 2 : n === 9 ? 3 : 2;
-  const rows = Math.ceil(n / cols);
+  let cols;
+  let rows;
+  if (n === 2) { cols = landscape ? 2 : 1; rows = landscape ? 1 : 2; }
+  else if (n === 6) { cols = landscape ? 3 : 2; rows = landscape ? 2 : 3; }
+  else if (n === 9) { cols = 3; rows = 3; }
+  else { cols = 2; rows = 2; }
   const sheets = [];
   for (let i = 0; i < src.length; i += n) {
     const p = makePage(paper, landscape);

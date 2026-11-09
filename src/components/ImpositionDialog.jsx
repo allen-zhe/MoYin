@@ -7,7 +7,7 @@ import { splitLongImage, composePages, coverageOf } from '../lib/imposition.js';
 
 const MODES = [
   { id: 'long', name: '长图分割', desc: '把一张超长图片切成多页', icon: Scissors },
-  { id: 'a3', name: 'A4 拼到 A3', desc: '两页 A4 并排到一张 A3', icon: Layers3 },
+  { id: 'a3', name: 'A4 拼到 A3', desc: '两页 A4 合成一张 A3，自动识别横竖', icon: Layers3 },
   { id: 'booklet', name: '小册子', desc: '骑马钉顺序，双面折页', icon: BookOpen },
   { id: 'nup', name: '多页合一', desc: '2 / 4 / 6 / 9 页合到一张', icon: Grid2X2 },
   { id: 'repeat', name: '重复拼版', desc: '同一页按行列复制满版', icon: Repeat2 },
@@ -92,7 +92,8 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
 
   function print() {
     if (!sheets.length) return;
-    onPrint?.({ sheets, paper: output.paper, landscape: output.landscape, coverage: coverageOf(sheets), mode });
+    const sheetLandscape = sheets[0].width > sheets[0].height;
+    onPrint?.({ sheets, paper: output.paper, landscape: sheetLandscape, coverage: coverageOf(sheets), mode });
   }
 
   const modeInfo = MODES.find((m) => m.id === mode);
@@ -217,7 +218,7 @@ export function ImpositionDialog({ open, files, item, initialMode, dpi = 300, on
             {mode === 'a3' || mode === 'booklet' ? (
               <div className="imposition-auto-note">
                 <CheckCircle2 size={16} />
-                <span>{mode === 'a3' ? '自动使用 A3 横向，两页 A4 并排。' : '自动使用 A4 横向，按骑马钉顺序排版，建议双面长边翻转。'}</span>
+                <span>{mode === 'a3' ? '自动识别源页方向：竖版两页并排到 A3 横向，横版两页上下叠放到 A3 纵向。' : '自动使用 A4 横向，按骑马钉顺序排版，建议双面长边翻转。'}</span>
               </div>
             ) : null}
           </div>
