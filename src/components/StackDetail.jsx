@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   X, Printer, FolderOpen, Tags, Tag, ChevronDown, FileText, Check, Scissors, LayoutGrid, GripVertical,
   Trash2, Plus, Minus, Layers3, ListOrdered, SlidersHorizontal, Info,
@@ -7,6 +7,7 @@ import { FileThumb } from './FileThumb.jsx';
 import { Toggle, Select, Button } from './ui.jsx';
 import { formatBytes, formatDate, money, stackAmount, stackPages, stackPrintState, amountForPages } from '../lib/format.js';
 import { printerFor, capabilitySummary } from '../lib/printerCaps.js';
+import { shouldMergePrint } from '../lib/print.js';
 
 export function StackDetail({
   stack, items, printers, settings, onClose, onPrint, onPrintLabel, onUpdateStack,
@@ -25,6 +26,12 @@ export function StackDetail({
   const printState = stackPrintState(stack);
   const allSelected = selectedFiles.length === (stack.files || []).length && stack.files?.length > 0;
 
+  // Merge policy follows the current selection: images merge by default, any
+  // PDF/text file defaults to per-file jobs so documents never get concatenated.
+  const [mergeOverride, setMergeOverride] = useState(null);
+  const mergePrint = mergeOverride === null ? shouldMergePrint(selectedFiles) : mergeOverride;
+  useEffect(() => { setMergeOverride(null); }, [selected]);
+
   const toggleFile = (id) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -36,7 +43,7 @@ export function StackDetail({
 
   const handlePrint = () => {
     if (!selectedFiles.length) return notify?.('请先选择要打印的文件', 'warn');
-    onPrint?.(selectedFiles, item, { copies, pageRange, skipBlank: !!stack.skipBlank });
+    onPrint?.(selectedFiles, item, { copies, pageRange, skipBlank: !!stack.skipBlank, mergePrint });
   };
 
   return (
@@ -212,6 +219,11 @@ export function StackDetail({
               {stack.coverage ? <span className="summary-config">· 覆盖率 {(stack.coverage * 100).toFixed(1)}%</span> : null}
             </div>
             <div className="detail-print-controls">
+              <div className="mini-switch-row merge-print-switch" title="开启后多个文件合并成一个打印任务；关闭后按文件顺序逐个发送。含 PDF 时默认关闭，纯图片默认开启。">
+                <span>合并打印</span>
+                <Toggle checked={mergePrint} onChange={(v) => setMergeOverride(v)} label="合并打印" />
+                <em className="merge-hint">{mergePrint ? '多文件合一' : '逐文件发送'}</em>
+              </div>
               <label className="inline-field">
                 <span>页码</span>
                 <input value={pageRange} onChange={(e) => setPageRange(e.target.value)} placeholder="—" aria-label="页码范围" />

@@ -321,7 +321,9 @@ function registerIpc() {
   });
 
   ipcMain.handle('pdf:export', async (_e, job) => {
-    const name = `墨印-检查-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const label = job?.label ? String(job.label).replace(/[\\/:*?"<>|]/g, '_').slice(0, 60) : '';
+    const name = label ? `${label}-检查-${stamp}.pdf` : `墨印-检查-${stamp}.pdf`;
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '保存检查 PDF',
       defaultPath: path.join(app.getPath('downloads'), name),

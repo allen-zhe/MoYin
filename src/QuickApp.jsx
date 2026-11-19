@@ -3,7 +3,7 @@ import { Minus, X, Printer, Smartphone } from 'lucide-react';
 import { QuickPanel } from './components/QuickPanel.jsx';
 import { Logo } from './components/Logo.jsx';
 import { ToastStack, Spinner } from './components/ui.jsx';
-import { preparePrint, executePrint } from './lib/print.js';
+import { preparePrint, executePrint, shouldMergePrint } from './lib/print.js';
 import { amountForPages, money, uid } from './lib/format.js';
 import { labelDataForStack, labelPageHtml, makeQr } from './lib/label.js';
 
@@ -52,17 +52,25 @@ export function QuickApp() {
     const copies = Math.max(1, Number(quick.copies) || 1);
     setPrinting({ percent: 2, stage: 'render', title: '正在准备打印', detail: `${files.length} 个文件 · ${copies} 份` });
     try {
-      const prepared = await preparePrint(files, item, {
-        copies, dpi: stateRef.current.settings.pdfDpi || 300, onProgress: (p) => setPrinting((prev) => ({ ...prev, ...p })),
-      });
-      const amount = Math.round(amountForPages(prepared.pages, item) * copies * 100) / 100;
-      setPrinting((prev) => ({ ...prev, percent: 82, stage: 'spooling', title: '正在发送到打印机' }));
-      const result = await executePrint({
-        html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
-        simulate: stateRef.current.settings.simulatePrint, jobId: uid('t_'),
-        onProgress: (p) => setPrinting((prev) => ({ ...prev, ...p })),
-      });
-      if (!result.ok) throw new Error(result.error || '打印失败');
+      const batches = shouldMergePrint(files) ? [files] : files.map((f) => [f]);
+      let totalPages = 0;
+      for (let bi = 0; bi < batches.length; bi += 1) {
+        const multi = batches.length > 1;
+        if (multi) setPrinting({ percent: 2, stage: 'render', title: `正在准备打印 ${bi + 1}/${batches.length}`, detail: `${batches[bi].map((f) => f.name).join('、')} · ${copies} 份` });
+        const prepared = await preparePrint(batches[bi], item, {
+          copies, dpi: stateRef.current.settings.pdfDpi || 300, onProgress: (p) => setPrinting((prev) => ({ ...prev, ...p })),
+        });
+        totalPages += prepared.pages;
+        setPrinting((prev) => ({ ...prev, percent: 82, stage: 'spooling', title: multi ? `正在发送 ${bi + 1}/${batches.length}` : '正在发送到打印机' }));
+        const result = await executePrint({
+          html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
+          simulate: stateRef.current.settings.simulatePrint, jobId: uid('t_'),
+          label: batches[bi].length === 1 ? String(batches[bi][0].name || '').replace(/\.[^.]+$/, '') : '',
+          onProgress: (p) => setPrinting((prev) => ({ ...prev, ...p })),
+        });
+        if (!result.ok) throw new Error(result.error || '打印失败');
+      }
+      const amount = Math.round(amountForPages(totalPages, item) * copies * 100) / 100;
       const next = {
         ...quick,
         amount: Math.round((quick.amount + amount) * 100) / 100,
@@ -71,7 +79,7 @@ export function QuickApp() {
       };
       setQuick(next);
       await window.cloudPrint.notifyQuickPrinted({ amount, count: files.length, items: files.map((f) => ({ name: f.name, pages: f.pages || 1 })) });
-      notify(`已打印 ${prepared.pages} 页 · ${money(amount)}`, 'success');
+      notify(`已打印 ${totalPages} 页 · ${money(amount)}`, 'success');
       setPrinting({ percent: 100, stage: 'done', title: '打印任务已提交', detail: '可在主窗口继续收款或打印标签' });
       setTimeout(() => setPrinting(null), 900);
     } catch (err) {
