@@ -22,6 +22,14 @@ export function paperSize(item, landscape) {
   return landscape ? { w: paper.h, h: paper.w } : { ...paper };
 }
 
+// Default merge policy: images may be merged into one job (same paper size,
+// no document boundaries), but any PDF/text file must be sent as its own job
+// so an odd-page PDF and an even-page PDF never get concatenated.
+export function shouldMergePrint(files) {
+  const list = files || [];
+  return list.length > 0 && list.every((f) => isImage(f));
+}
+
 async function renderTextPages(file, item, dpi = 300) {
   const res = await window.cloudPrint.readFile(file.path);
   if (!res?.ok) throw new Error('文本读取失败');
@@ -170,7 +178,7 @@ export function sheetsToHtml(sheets, paper, landscape) {
   </style></head><body>${sheets.map((s) => `<div class="sheet"><img src="${s.dataUrl}" alt=""></div>`).join('')}</body></html>`;
 }
 
-export async function executePrint({ html, images, orientations, item, copies, paper, landscape, simulate, jobId }) {
+export async function executePrint({ html, images, orientations, item, copies, paper, landscape, simulate, jobId, label }) {
   if (item?.printer === VIRTUAL_PDF_NAME) {
     return window.cloudPrint.exportPdf({
       images,
@@ -179,6 +187,7 @@ export async function executePrint({ html, images, orientations, item, copies, p
       pageSize: paper || item.paper || 'A4',
       landscape: !!landscape,
       item,
+      label,
     });
   }
   if (images?.length && window.cloudPrint.printImages) {

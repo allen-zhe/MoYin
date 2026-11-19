@@ -425,6 +425,7 @@ input, textarea { user-select: text; }
 .detail-print-controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .inline-field { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #7f796f; }
 .inline-field input { width: 42px; height: 27px; border: 1px solid #e3dcd3; border-radius: 6px; padding: 0 5px; outline: 0; background: #fff; text-align: center; font-size: 10px; }
+.merge-print-switch .merge-hint { font-style: normal; color: #b3a99d; font-size: 8.5px; }
 .quick-copy-chips { display: flex; gap: 2px; }
 .quick-copy-chips button { width: 22px; height: 25px; border: 1px solid #e5ded5; background: #fff; border-radius: 5px; color: #7b756c; font-size: 9px; }
 .quick-copy-chips button.active { background: #e9f5e5; color: #246235; border-color: #b7d6b3; }

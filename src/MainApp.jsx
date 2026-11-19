@@ -23,7 +23,7 @@ import {
   uid, money, stackPages, stackSize, stackPrintState, stackPayState, amountForPages,
   matchesSearch, formatDate, formatBytes, playTone, stackAmount,
 } from './lib/format.js';
-import { preparePrint, executePrint, sheetsToHtml } from './lib/print.js';
+import { preparePrint, executePrint, sheetsToHtml, shouldMergePrint } from './lib/print.js';
 import { getPdfPageCount } from './lib/pdf.js';
 import { labelDataForStack, labelPageHtml, makeQr } from './lib/label.js';
 import { createErpAdapter } from './lib/erp.js';
@@ -738,23 +738,49 @@ export function MainApp() {
     setState((prev) => prev ? ({ ...prev, tasks: [task, ...prev.tasks].slice(0, 120) }) : prev);
     setPrinting({ stage: 'render', percent: 2, title: '正在准备打印', detail: `${files.length} 个文件 · ${copies} 份`, jobId });
     try {
-      const prepared = await preparePrint(files, item, {
-        copies, pageRange: opts.pageRange || '', skipBlank: !!opts.skipBlank, dpi: state.settings.pdfDpi || 300,
-        onProgress: (p) => setPrinting((prev) => prev ? ({
-          ...prev, ...p, title: '正在准备打印',
-          detail: p.name ? `${p.name} · ${p.page || 0}/${p.pageTotal || 0} 页` : prev.detail,
-        }) : prev),
-      });
-      const amount = Math.round(amountForPages(prepared.pages, item) * copies * 100) / 100;
-      const coverage = prepared.coverage || 0;
-      setPrinting((prev) => prev ? ({ ...prev, stage: 'spooling', percent: 80, title: '正在发送到打印机', detail: `${task.printer} · 覆盖率 ${(coverage * 100).toFixed(1)}%` }) : prev);
-      const result = await executePrint({
-        html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
-        simulate: state.settings.simulatePrint || boot.simulate, jobId,
-        onProgress: (p) => setPrinting((prev) => prev ? ({ ...prev, ...p }) : prev),
-      });
-      if (result?.canceled) { setPrinting(null); return; }
-      if (!result?.ok) throw new Error(result?.error || '打印失败');
+      const mergePrint = opts.mergePrint === undefined ? shouldMergePrint(files) : !!opts.mergePrint;
+      const batches = mergePrint ? [files] : files.map((f) => [f]);
+      let totalPages = 0;
+      let coverageSum = 0;
+      let lastResult = null;
+      const virtualPaths = [];
+      for (let bi = 0; bi < batches.length; bi += 1) {
+        const batch = batches[bi];
+        const multi = batches.length > 1;
+        if (multi) {
+          setPrinting((prev) => prev ? ({ ...prev, stage: 'render', title: `正在准备打印 ${bi + 1}/${batches.length}`, detail: `${batch.map((f) => f.name).join('、')} · ${copies} 份` }) : prev);
+        }
+        let prepared;
+        try {
+          prepared = await preparePrint(batch, item, {
+            copies, pageRange: opts.pageRange || '', skipBlank: !!opts.skipBlank, dpi: state.settings.pdfDpi || 300,
+            onProgress: (p) => setPrinting((prev) => prev ? ({
+              ...prev, ...p, title: multi ? `正在准备打印 ${bi + 1}/${batches.length}` : '正在准备打印',
+              detail: p.name ? `${p.name} · ${p.page || 0}/${p.pageTotal || 0} 页` : prev.detail,
+            }) : prev),
+          });
+        } catch (err) {
+          if (multi && /没有可打印的页面/.test(err.message || '')) continue;
+          throw err;
+        }
+        totalPages += prepared.pages;
+        coverageSum += (prepared.coverage || 0) * (prepared.pages || 1);
+        setPrinting((prev) => prev ? ({ ...prev, stage: 'spooling', percent: 80, title: '正在发送到打印机', detail: `${task.printer} · ${multi ? `第 ${bi + 1}/${batches.length} 个任务` : `覆盖率 ${((prepared.coverage || 0) * 100).toFixed(1)}%`}` }) : prev);
+        const result = await executePrint({
+          html: prepared.html, images: prepared.images, orientations: prepared.orientations, item, copies, paper: prepared.paper, landscape: prepared.landscape,
+          simulate: state.settings.simulatePrint || boot.simulate, jobId,
+          label: !multi && batch.length === 1 ? String(batch[0].name || '').replace(/\.[^.]+$/, '') : '',
+          onProgress: (p) => setPrinting((prev) => prev ? ({ ...prev, ...p }) : prev),
+        });
+        if (result?.canceled) { setPrinting(null); return; }
+        if (!result?.ok) throw new Error(result?.error || '打印失败');
+        lastResult = result;
+        if (result.virtual && result.pdfPath) virtualPaths.push(result.pdfPath);
+      }
+      if (!totalPages) throw new Error('没有可打印的页面。');
+      const amount = Math.round(amountForPages(totalPages, item) * copies * 100) / 100;
+      const coverage = coverageSum / totalPages;
+      const sentPrinter = lastResult?.printer || '';
       const now = Date.now();
       setState((prev) => {
         if (!prev) return prev;
@@ -772,7 +798,7 @@ export function MainApp() {
             archived: (state.settings.removeAfterPrint || state.settings.autoArchive) ? true : s.archived,
             coverage,
             payment: state.settings.autoPayment ? 'paid' : (s.payment === 'paid' ? 'paid' : 'unpaid'),
-            printedPrinter: result.printer || item.printer || '',
+            printedPrinter: sentPrinter || item.printer || '',
           };
         });
         if (!targetStack) {
@@ -789,16 +815,16 @@ export function MainApp() {
           payments = [{ id: uid('pay_'), type: 'payment', amount, stackId: targetStack.id, stackTitle: targetStack.title, note: '会员自动收款', time: now }, ...payments];
         }
         const tasks = prev.tasks.map((t) => t.id === jobId ? ({
-          ...t, state: 'done', completedAt: now, amount, pages: prepared.pages, coverage,
-          printer: result.printer || t.printer, simulated: !!result.simulated,
+          ...t, state: 'done', completedAt: now, amount, pages: totalPages, coverage,
+          printer: sentPrinter || t.printer, simulated: !!lastResult?.simulated,
         }) : t);
         return { ...prev, stacks, tasks, quick, payments };
       });
       playTone('ok');
       if (targetStack) syncErpOrder({ ...targetStack, printedAt: now, frozenAmount: (Number(targetStack.frozenAmount) || 0) + amount, payment: state.settings.autoPayment ? 'paid' : (targetStack.payment === 'paid' ? 'paid' : 'unpaid') }, item, amount);
-      if (result.virtual) notify(`检查 PDF 已保存：${result.pdfPath}`, 'success');
-      else notify(`已发送 ${prepared.pages} 页 · 覆盖率 ${(coverage * 100).toFixed(1)}%`, 'success');
-      setPrinting((prev) => prev ? ({ ...prev, stage: 'done', percent: 100, title: '打印任务已提交', detail: result.simulated ? '模拟打印完成' : '系统打印队列已接收' }) : prev);
+      if (virtualPaths.length) notify(`检查 PDF 已保存 ${virtualPaths.length} 个：${virtualPaths.join('、')}`, 'success');
+      else notify(`已发送 ${totalPages} 页 · 覆盖率 ${(coverage * 100).toFixed(1)}%`, 'success');
+      setPrinting((prev) => prev ? ({ ...prev, stage: 'done', percent: 100, title: '打印任务已提交', detail: lastResult?.simulated ? '模拟打印完成' : '系统打印队列已接收' }) : prev);
       setTimeout(() => setPrinting(null), 900);
       if (targetStack && state.settings.splitReminder) {
         const hours = Math.max(1, Number(state.settings.splitHours) || 12);
