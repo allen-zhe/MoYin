@@ -35,7 +35,8 @@
 | 桌面容器 | Electron 33（Chromium + Node.js） |
 | 前端 | React 18 + Vite 5，原生 CSS |
 | PDF | PDF.js，页面位图化后排版打印 |
-| 打印 | Electron `webContents.print` + Windows 打印驱动；驱动首选项由 C# `PrintPrefs.exe` 打开 |
+| 打印 | C# `PrintJob.exe`（DEVMODE、逐页方向、双面、颜色）+ Chromium 打印回退；首选项由 C# `PrintPrefs.exe` 打开并保存 DEVMODE |
+| Office | C# `OfficeConv.exe` 调 Microsoft Office / WPS 的 COM 接口，或 LibreOffice 无头转换 → PDF |
 | 文件监听 | chokidar |
 | 手机传输 | Node HTTP + busboy，手机端为内联响应式页面 |
 | 二维码 | qrcode |
@@ -64,9 +65,17 @@ npm run dist         # 生成安装版 + 便携版
 
 在打印设置、堆叠详情或快捷档位里把打印机选为 **「墨印 PDF 检查机」**，点击打印后会弹出保存对话框，可保存到任意目录。它支持 A3/A4、黑白/彩色配置，并按每一页的实际方向生成 PDF，适合在不耗纸的情况下检查横竖版混排、拼版和边距。
 
+## Word / Excel / PowerPoint
+
+把 `.doc/.docx/.rtf`、`.xls/.xlsx/.xlsm/.csv`、`.ppt/.pptx/.pptm` 拖进堆叠即可：程序先转成 PDF 并缓存，之后与普通 PDF 一样渲染、预览、拼版、打印。
+
+- 转换顺序：Microsoft Office → WPS → LibreOffice；可在「设置 → 启动设置 → Office 转换引擎」固定为仅 Office 或仅 WPS。
+- 首次导入时完成转换并统计页数，结果缓存到 `%APPDATA%\moprint\office-cache`，同一文件只转一次。
+- 兼容性最好的是 Office；WPS 走它的 Office 兼容接口；LibreOffice 对复杂排版可能有细微差异。
+
 ## 安装版
 
-安装包位于 `release/墨印-1.1.3-安装版.exe`：
+安装包位于 `release/墨印-1.1.4-安装版.exe`：
 
 - 显示 AGPLv3 许可页，必须同意后才能继续；
 - 可自由选择安装目录；
@@ -74,7 +83,7 @@ npm run dist         # 生成安装版 + 便携版
 - 安装时静默尝试启动 Windows 打印后台服务并创建 `%APPDATA%\moprint` 数据目录；
 - Electron 自带 Chromium/Node 运行时，无需额外安装 WebView2 或 .NET。
 
-便携版：`release/墨印-1.1.3-便携版.exe`，双击运行。
+便携版：`release/墨印-1.1.4-便携版.exe`，双击运行。
 
 ## 手机传输
 
@@ -103,6 +112,7 @@ electron/
   main.js       窗口、托盘、IPC、打印、打印机首选项、ERP 桥
   preload.js    安全 API
   printer.js    打印机枚举、C# 首选项/打印桥、隐藏窗口回退
+  office.js     Office → PDF 转换编排（Office / WPS / LibreOffice）
   receiver.js   局域网接收与手机页面
   store.js      JSON 原子持久化
   defaults.js   默认价格方案和设置
@@ -112,9 +122,10 @@ src/
   components/   堆叠、详情、打印设置、标签、统计、拼版等
   lib/          PDF、打印 HTML、拼版、标签、ERP、覆盖率
 build/
-  PrintPrefs.cs C# 打印机驱动首选项（DocumentProperties/DEVMODE）
-  PrintCaps.cs  C# 打印机能力（DeviceCapabilities/PrinterSettings）
-  PrintJob.cs   C# 文档打印（PaperSize/Color/Duplex）
+  PrintPrefs.cs  C# 打印机驱动首选项（DocumentProperties/DEVMODE）
+  PrintCaps.cs   C# 打印机能力（DeviceCapabilities/PrinterSettings）
+  PrintJob.cs    C# 文档打印（PaperSize/Color/Duplex/DEVMODE）
+  OfficeConv.cs  C# Office/WPS COM 转 PDF
 build/
   icon.svg      橙色品牌图标
   license.txt   AGPLv3（安装许可页）
@@ -125,7 +136,7 @@ docs/
 
 ## 开源协议
 
-本项目采用 **GNU General Public License v3.0 or later**。你可以自由使用、修改、分发；分发修改版时需保留同样的自由，并提供对应源码。
+本项目采用 **GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later）**。你可以自由使用、修改、分发；分发修改版或作为网络服务提供时，需保留同样的自由，并提供对应源码。
 
 完整协议见 [LICENSE](LICENSE)。安装包会在安装向导中展示同一份协议并要求同意。
 
@@ -134,12 +145,15 @@ docs/
 - 项目主页：`https://github.com/allen-zhe/MoYin`
 - 问题反馈：`https://github.com/allen-zhe/MoYin/issues/new/choose`
 
-仓库地址目前是预留的正式地址；如果之后更换组织或仓库名，只需修改 `src/lib/constants.js` 中的 `GITHUB_URL` / `GITHUB_ISSUES_URL`。
+使用中遇到问题，欢迎附上「系统版本 / 打印机型号 / 操作步骤 / 报错截图」提 Issue；功能建议也走同一个入口。
 
 ## 已知边界
 
-- 暂不原生支持 Word/Excel/PPT，需先转 PDF。
-- 实际打印质量、双面翻转、纸张来源由 Windows 打印机驱动决定，不同驱动支持度不同。
+- **Office 转换依赖本机套件**：Word/Excel/PPT 需要安装 Microsoft Office 或 WPS；两者都没有时可用 LibreOffice。转换顺序为 Office → WPS → LibreOffice，也可在设置里固定引擎。
+- **Excel 按整本工作簿导出 PDF**：多工作表、打印区域、分页符以 Excel/WPS 自身的打印设置为准；没设打印区域的宽表可能被缩到一页或按默认分页。
+- **PPT 幻灯片是固定尺寸**：16:9 转出约 13.33×7.5 英寸，选「适合可打印区域」会留白，选「铺满纸张」会裁掉边缘。
+- 实际打印质量、双面翻转、纸盒来源由 Windows 驱动决定；驱动不支持的纸张/双面会在打印前校验时提示。
+- PDF 按 300/600 DPI 位图化后打印，不做矢量透传；很小的字号建议用 600 DPI。
 - 手机传输使用随机连接码，不做账号鉴权，请只在可信 Wi-Fi 使用。
 - ERP 接口默认关闭；未配置时不会发起网络请求。
 - 便携版未做代码签名，Windows 首次运行可能出现 SmartScreen 提示。
