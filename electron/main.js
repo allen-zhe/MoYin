@@ -13,6 +13,7 @@ const { printHtml, printImages, imagesToHtml, listPrinters, listStatus } = requi
 const { ReceiveServer } = require('./receiver');
 const { exportImagesPdf } = require('./pdfExport');
 const { OFFICE_EXT, isOfficePath, convertOffice, prepareOfficeFile } = require('./office');
+const { PDFDocument } = require('pdf-lib');
 const chokidar = require('chokidar');
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -213,14 +214,19 @@ async function startReceive(port) {
   }
   if (!receiveServer) {
     receiveServer = new ReceiveServer({
-      onFiles: async (files) => {
+      resolveDir: () => {
+        try { return readState().settings.receiveDir || ''; } catch { return ''; }
+      },
+      quote: (files, contact) => quoteReceiveOrder(files, contact),
+      onFiles: async (files, contact, order) => {
+        const payload = { files, contact, order };
         try {
           const pendingPath = path.join(dataDir(), 'received-files.json');
-          fs.writeFileSync(pendingPath, JSON.stringify(files, null, 2), 'utf8');
+          fs.writeFileSync(pendingPath, JSON.stringify(payload, null, 2), 'utf8');
         } catch (err) { console.error('[receive] pending write', err); }
         if (mainWindow && !mainWindow.isDestroyed()) {
           if (!mainWindow.isVisible()) mainWindow.show();
-          mainWindow.webContents.send('receive:files', files);
+          mainWindow.webContents.send('receive:files', payload);
         }
       },
       onLog: (msg) => console.log('[receive]', msg),
@@ -307,6 +313,53 @@ async function statFile(filePath) {
 
 function normalizeError(err) {
   return err && err.message ? err.message : String(err);
+}
+
+// 手机端下单报价：统计页数，并按当前价格方案里对应「纸张 + 颜色」的单价计算。
+async function quoteReceiveOrder(files, contact) {
+  let pages = 0;
+  for (const file of files) {
+    if (file.ext === 'pdf') {
+      try {
+        const doc = await PDFDocument.load(await fs.promises.readFile(file.path), { ignoreEncryption: true, updateMetadata: false });
+        pages += doc.getPageCount();
+      } catch {
+        pages += 1;
+      }
+    } else if (isOfficePath(file.path)) {
+      try {
+        const converted = await prepareOfficeFile(file.path, officeEngineSetting());
+        file.convertedPdf = converted.pdfPath;
+        file.pages = converted.pages || 1;
+        pages += file.pages;
+      } catch {
+        pages += 1;
+      }
+    } else {
+      pages += 1;
+    }
+  }
+
+  const state = readState();
+  const scheme = (state.schemes || []).find((s) => s.id === state.activeSchemeId) || (state.schemes || [])[0];
+  const list = scheme?.items || [];
+  const item = list.find((i) => i.paper === contact.paper && i.color === contact.color && i.duplex === 'simplex')
+    || list.find((i) => i.paper === contact.paper && i.color === contact.color)
+    || list.find((i) => i.paper === contact.paper)
+    || list[0];
+  const unit = Number(item?.price) || 0;
+  const amount = Math.round(pages * unit * 100) / 100;
+  return {
+    no: `M${Date.now().toString(36).toUpperCase().slice(-6)}`,
+    pages,
+    unit,
+    amount,
+    paper: contact.paper,
+    color: contact.color,
+    itemId: item?.id || '',
+    itemName: item?.name || '',
+    createdAt: Date.now(),
+  };
 }
 
 function registerIpc() {

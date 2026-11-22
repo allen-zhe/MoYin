@@ -15,7 +15,7 @@ function Row({ label, hint, children }) {
   );
 }
 
-export function AppSettings({ open, settings, receive, onClose, onChange, onPickDir, onOpenReceive, onOpenLabel, notify }) {
+export function AppSettings({ open, settings, receive, onClose, onChange, onPickDir, onPickReceiveDir, onOpenReceive, onOpenLabel, notify }) {
   const [anchor, setAnchor] = useState('print');
   const update = (patch) => onChange?.({ ...settings, ...patch });
   const sections = [
@@ -103,6 +103,9 @@ export function AppSettings({ open, settings, receive, onClose, onChange, onPick
               </Row>
               <Row label="服务端口" hint="如果端口被占用会自动顺延；修改后到二维码页点“刷新地址”">
                 <input className="control input small-input" type="number" min="1024" max="65535" value={settings.receivePort} onChange={(e) => update({ receivePort: Math.max(1024, Math.min(65535, Number(e.target.value) || 18666)) })} />
+              </Row>
+              <Row label="接收目录" hint={settings.receiveDir || '默认保存在 %APPDATA%\\moprint\\received\\日期'}>
+                <Button variant="ghost" size="sm" icon={FolderOpen} onClick={onPickReceiveDir}>选择文件夹</Button>
               </Row>
               <div className={`receive-mini ${receive?.running ? 'on' : ''}`}>
                 <div>

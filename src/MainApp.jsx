@@ -100,7 +100,8 @@ export function MainApp() {
         const first = data.state.stacks?.find((s) => !s.archived) || data.state.stacks?.[0];
         if (first) setSelectedStackId(first.id);
         if (data.pendingReceived?.length) {
-          setTimeout(() => ingestExternal(data.pendingReceived, 'receive'), 50);
+          const payload = Array.isArray(data.pendingReceived) ? { files: data.pendingReceived } : data.pendingReceived;
+          setTimeout(() => ingestExternal(payload.files || [], 'receive', payload.contact || null, payload.order || null), 50);
         }
         if (data.state.settings.watchDir && !data.state.settings.watchPaused) {
           setTimeout(async () => {
@@ -171,7 +172,10 @@ export function MainApp() {
 
   useEffect(() => {
     const offs = [];
-    offs.push(window.cloudPrint.onReceiveFiles((files) => ingestExternal(files, 'receive')));
+    offs.push(window.cloudPrint.onReceiveFiles((payload) => {
+      const items = Array.isArray(payload) ? payload : (payload?.files || []);
+      ingestExternal(items, 'receive', payload?.contact || null, payload?.order || null);
+    }));
     offs.push(window.cloudPrint.onReceiveInfo((info) => setReceive(info || { running: false })));
     offs.push(window.cloudPrint.onWatcherFiles((files) => ingestExternal(files, 'watch')));
     offs.push(window.cloudPrint.onQuickPrinted((payload) => {
@@ -483,7 +487,7 @@ export function MainApp() {
     playTone('ok');
   }
 
-  function ingestExternal(files, source) {
+  function ingestExternal(files, source, contact = null, order = null) {
     if (!files?.length) return;
     const now = Date.now();
     const WINDOW = 10 * 60 * 1000;
@@ -508,10 +512,12 @@ export function MainApp() {
       const id = uid('s_');
       targetStackId = id;
       const title = source === 'receive' ? '手机传输' : `自动整理 ${seq}`;
+      const receiveItem = order?.itemId ? items.find((i) => i.id === order.itemId) : null;
       const stack = {
         id,
         title,
-        customer: '散客',
+        customer: contact?.nickname || '散客',
+        phone: contact?.phone || '',
         folder: dirname(fresh[0]?.path),
         files: fresh,
         source,
@@ -520,14 +526,20 @@ export function MainApp() {
         updatedAt: now,
         archived: false,
         payment: 'none',
-        itemId: items[0]?.id || '',
+        itemId: order?.itemId || items[0]?.id || '',
+        requestedPaper: order?.paper || contact?.paper || '',
+        requestedColor: order?.color || contact?.color || '',
+        receiveOrder: order || null,
+        quoteAmount: order?.amount ?? null,
       };
       addedAll = fresh;
       return { ...prev, stacks: [stack, ...prev.stacks], counters: { ...prev.counters, stackSeq: seq + 1 } };
     });
     if (addedAll.length) {
       hydratePages(addedAll);
-      notify(source === 'receive' ? `收到 ${addedAll.length} 个手机文件` : `文件目录新增 ${addedAll.length} 个文件`);
+      notify(source === 'receive'
+        ? `收到 ${contact?.nickname ? `${contact.nickname} · ` : ''}${addedAll.length} 个手机文件${order?.amount != null ? `（${order.pages} 页，报价 ¥${Number(order.amount).toFixed(2)}）` : ''}`
+        : `文件目录新增 ${addedAll.length} 个文件`);
       playTone('ok');
       if (!selectedStackId && targetStackId) setSelectedStackId(targetStackId);
     }
@@ -596,6 +608,14 @@ export function MainApp() {
     if (dir) {
       updateSettings({ watchDir: dir });
       notify('文件目录已更新');
+    }
+  }
+
+  async function pickReceiveDirectory() {
+    const dir = await window.cloudPrint.pickFolder({ defaultPath: state.settings.receiveDir || boot.paths?.downloads });
+    if (dir) {
+      updateSettings({ receiveDir: dir });
+      notify('手机接收目录已更新');
     }
   }
 
@@ -1400,6 +1420,7 @@ export function MainApp() {
           const dir = await window.cloudPrint.pickFolder({ defaultPath: state.settings.watchDir || boot.paths?.documents });
           if (dir) updateSettings({ watchDir: dir });
         }}
+        onPickReceiveDir={pickReceiveDirectory}
         onOpenReceive={() => setDialog('receive')} onOpenLabel={() => setDialog('label')}
         notify={notify}
       />
