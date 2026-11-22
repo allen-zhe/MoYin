@@ -74,6 +74,14 @@ export function AppSettings({ open, settings, receive, onClose, onChange, onPick
               <Row label="关闭且不打标签"><kbd>Ctrl + E</kbd></Row>
               <h4><Monitor size={15} /> 启动设置</h4>
               <Row label="开机自启" hint="登录 Windows 后在后台启动接收服务"><Toggle checked={settings.autoStart} onChange={(v) => update({ autoStart: v })} label="开机自启" /></Row>
+              <Row label="监听新文件" hint="文件夹里新出现的 PDF/图片会自动进入堆叠">
+                <Toggle
+                  checked={!!settings.watchDir && !settings.watchPaused}
+                  onChange={(v) => update({ watchPaused: !v })}
+                  label="监听新文件"
+                  disabled={!settings.watchDir}
+                />
+              </Row>
               <Row label="文件目录" hint={settings.watchDir || '未选择，接收和手动导入仍然可用'}>
                 <Button variant="ghost" size="sm" icon={FolderOpen} onClick={onPickDir}>选择文件夹</Button>
               </Row>

@@ -102,7 +102,7 @@ export function MainApp() {
         if (data.pendingReceived?.length) {
           setTimeout(() => ingestExternal(data.pendingReceived, 'receive'), 50);
         }
-        if (data.state.settings.watchDir) {
+        if (data.state.settings.watchDir && !data.state.settings.watchPaused) {
           setTimeout(async () => {
             const watched = await window.cloudPrint.scanWatch();
             if (watched?.length) ingestExternal(watched, 'watch');
@@ -545,13 +545,24 @@ export function MainApp() {
       window.cloudPrint.setAutoStart(!!patch.autoStart);
     }
     if (patch.watchDir !== undefined && patch.watchDir !== prevSettings.watchDir) {
-      if (patch.watchDir) {
+      if (patch.watchDir && !next.watchPaused) {
         window.cloudPrint.startWatch(patch.watchDir).then(async () => {
           const files = await window.cloudPrint.scanWatch();
           if (files?.length) ingestExternal(files, 'watch');
         }).catch((err) => notify(err.message || '目录监听启动失败', 'error'));
-      } else {
+      } else if (!patch.watchDir) {
         window.cloudPrint.stopWatch();
+      }
+    }
+    if (patch.watchPaused !== undefined && !!patch.watchPaused !== !!prevSettings.watchPaused && next.watchDir) {
+      if (patch.watchPaused) {
+        window.cloudPrint.stopWatch();
+      } else {
+        window.cloudPrint.startWatch(next.watchDir).then(async () => {
+          const files = await window.cloudPrint.scanWatch();
+          if (files?.length) ingestExternal(files, 'watch');
+          notify('已恢复监听文件目录');
+        }).catch((err) => notify(err.message || '目录监听启动失败', 'error'));
       }
     }
     if (patch.receiveEnabled !== undefined && !!patch.receiveEnabled !== !!prevSettings.receiveEnabled) {
@@ -1176,7 +1187,9 @@ export function MainApp() {
     <div className="app-shell">
       <TitleBar version={boot.version} />
       <Header
-        search={search} setSearch={setSearch} watchDir={state.settings.watchDir} onPickDirectory={pickDirectory}
+        search={search} setSearch={setSearch} watchDir={state.settings.watchDir}
+        watchActive={!!state.settings.watchDir && !state.settings.watchPaused}
+        onPickDirectory={pickDirectory}
         onOpenPrintSettings={() => setDialog('print')} onOpenLabelSettings={() => setDialog('label')}
         alwaysOnTop={state.settings.alwaysOnTop} onToggleAlwaysOnTop={(v) => updateSettings({ alwaysOnTop: v })}
         onOpenReceive={() => setDialog('receive')} receiveRunning={receive.running || state.settings.receiveEnabled}

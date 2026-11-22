@@ -1,7 +1,7 @@
 import {
   Minus, Square, Copy, X, Search, Printer, Tags, Pin, Smartphone,
   Plus, Layers, CircleDollarSign, Settings2, SlidersHorizontal,
-  Clock3, Rows3, ArrowUpDown, PanelRightClose, PanelRightOpen,
+  Clock3, Rows3, ArrowUpDown, PanelRightClose, PanelRightOpen, FolderOpen,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Logo } from './Logo.jsx';
@@ -18,7 +18,7 @@ export function TitleBar({ version }) {
       <div className="titlebar-brand">
         <Logo size={19} />
         <span>墨印</span>
-        <span className="titlebar-ver">V{version || '1.0.2'}</span>
+        <span className="titlebar-ver">V{version || '1.0.3'}</span>
       </div>
       <div className="titlebar-actions" onDoubleClick={(e) => e.stopPropagation()}>
         <button type="button" aria-label="最小化" title="最小化" onClick={() => window.cloudPrint.window.minimize()}>
@@ -36,7 +36,7 @@ export function TitleBar({ version }) {
 }
 
 export function Header({
-  search, setSearch, watchDir, onPickDirectory, onOpenPrintSettings, onOpenLabelSettings,
+  search, setSearch, watchDir, watchActive, onPickDirectory, onOpenPrintSettings, onOpenLabelSettings,
   alwaysOnTop, onToggleAlwaysOnTop, onOpenReceive, receiveRunning, version,
 }) {
   return (
@@ -63,6 +63,16 @@ export function Header({
       </div>
 
       <div className="header-actions">
+        <button
+          type="button"
+          className={`soft-btn ${watchActive ? 'receive-on' : ''}`}
+          onClick={onPickDirectory}
+          title={watchActive ? `正在监听：${watchDir}` : (watchDir ? `已暂停监听：${watchDir}` : '选择要自动监听新文件的文件夹')}
+        >
+          <FolderOpen size={17} strokeWidth={1.8} />
+          {watchActive ? '监听中' : '监听文件夹'}
+          <i className={`status-dot ${watchActive ? 'on' : ''}`} />
+        </button>
         <button type="button" className="soft-btn" onClick={onOpenPrintSettings} title="管理打印设置、价格方案与打印机">
           <Printer size={17} strokeWidth={1.8} />
           打印设置

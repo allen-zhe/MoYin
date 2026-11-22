@@ -30,6 +30,7 @@ function createDefaultState() {
       shortcuts: true,
       autoStart: false,
       watchDir: '',
+      watchPaused: false,
       erpEnabled: false,
       erpEndpoint: '',
       erpToken: '',
