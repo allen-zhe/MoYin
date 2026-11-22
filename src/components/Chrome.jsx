@@ -1,9 +1,9 @@
 import {
   Minus, Square, Copy, X, Search, Printer, Tags, Pin, Smartphone,
   Plus, Layers, CircleDollarSign, Settings2, SlidersHorizontal,
-  Clock3, Rows3, ArrowUpDown, PanelRightClose, PanelRightOpen, FolderOpen,
+  Clock3, Rows3, ArrowUpDown, PanelRightClose, PanelRightOpen, FolderOpen, ChevronDown, Check,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.jsx';
 
 export function TitleBar({ version }) {
@@ -18,7 +18,7 @@ export function TitleBar({ version }) {
       <div className="titlebar-brand">
         <Logo size={19} />
         <span>墨印</span>
-        <span className="titlebar-ver">V{version || '1.1.1'}</span>
+        <span className="titlebar-ver">V{version || '1.1.2'}</span>
       </div>
       <div className="titlebar-actions" onDoubleClick={(e) => e.stopPropagation()}>
         <button type="button" aria-label="最小化" title="最小化" onClick={() => window.cloudPrint.window.minimize()}>
@@ -107,19 +107,56 @@ export function Header({
 }
 
 export function PillSelect({ value, onChange, options, label, className = '', icon: Icon }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const items = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
+  const current = items.find((o) => o.value === value) || items[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
   return (
-    <label className={`pill-select ${className}`} title={label}>
-      {Icon ? <Icon size={16} strokeWidth={1.8} /> : null}
-      <span className="pill-label">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-        {options.map((o) => {
-          const val = typeof o === 'string' ? o : o.value;
-          const text = typeof o === 'string' ? o : o.label;
-          return <option key={val} value={val}>{text}</option>;
-        })}
-      </select>
-      <SlidersHorizontal size={12} className="pill-chevron" style={{ display: 'none' }} />
-    </label>
+    <div ref={wrapRef} className={`pill-select ${open ? 'open' : ''} ${className}`}>
+      <button
+        type="button"
+        className="pill-trigger"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={label || current?.label}
+      >
+        {Icon ? <Icon size={16} strokeWidth={1.8} /> : null}
+        <span className="pill-value">{current?.label ?? ''}</span>
+        <ChevronDown size={14} className="pill-arrow" strokeWidth={2} />
+      </button>
+      {open ? (
+        <ul className="pill-menu" role="listbox" aria-label={label || '选择'}>
+          {items.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o.value === value}
+                className={o.value === value ? 'active' : ''}
+                onClick={() => { onChange?.(o.value); setOpen(false); }}
+              >
+                <span>{o.label}</span>
+                {o.value === value ? <Check size={14} strokeWidth={2.4} /> : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 

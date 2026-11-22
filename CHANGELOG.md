@@ -1,5 +1,10 @@
 # 更新记录
 
+## 1.1.2
+
+- **筛选下拉美化**：顶部「时间范围 / 全部·堆叠中·已归档」从系统原生下拉框改成自绘菜单——圆角卡片、柔和阴影、悬停高亮、选中项打勾、展开动画，并按 Esc 或点击空白处关闭。
+- 保持键盘可访问（`aria-haspopup` / `role="listbox"` / `option`）。
+
 ## 1.1.1
 
 - **WPS 支持**：Office 转换新增 WPS 引擎（`KWPS/KET/KWPP.Application`），与 Microsoft Office 使用同一套调用方式。
