@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Web.Script.Serialization;
 
@@ -17,6 +18,7 @@ internal sealed class JobConfig
     public int copies { get; set; }
     public List<string> images { get; set; }
     public List<bool> orientations { get; set; }
+    public string devmodeFile { get; set; }
     public string outputFile { get; set; }
 }
 
@@ -76,11 +78,41 @@ internal static class PrintJob
                 else
                     doc.PrinterSettings.Duplex = Duplex.Simplex;
 
-                var paper = FindPaper(doc.PrinterSettings, cfg.paper, cfg.landscape);
-                doc.DefaultPageSettings.PaperSize = paper;
-                doc.DefaultPageSettings.Landscape = cfg.landscape;
-                doc.DefaultPageSettings.Color = cfg.color;
+                // 驱动首选项里保存的完整 DEVMODE（媒体类型、质量、双面等）优先。
+                bool hasDevmode = false;
+                if (!string.IsNullOrWhiteSpace(cfg.devmodeFile) && File.Exists(cfg.devmodeFile))
+                {
+                    try
+                    {
+                        byte[] bytes = File.ReadAllBytes(cfg.devmodeFile);
+                        IntPtr h = Marshal.AllocHGlobal(bytes.Length);
+                        try
+                        {
+                            Marshal.Copy(bytes, 0, h, bytes.Length);
+                            doc.PrinterSettings.SetHdevmode(h);
+                        }
+                        finally
+                        {
+                            Marshal.FreeHGlobal(h);
+                        }
+                        hasDevmode = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine("devmode: " + ex.Message);
+                    }
+                }
+
+                if (!hasDevmode)
+                {
+                    var paper = FindPaper(doc.PrinterSettings, cfg.paper, cfg.landscape);
+                    doc.DefaultPageSettings.PaperSize = paper;
+                    doc.DefaultPageSettings.Landscape = cfg.landscape;
+                    doc.DefaultPageSettings.Color = cfg.color;
+                }
                 doc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+                // SetHdevmode 会把份数重置为 DEVMODE 里的值，这里重新按任务设置。
+                doc.PrinterSettings.Copies = (short)Math.Max(1, Math.Min(99, cfg.copies));
 
                 int orientationIndex = 0;
                 doc.QueryPageSettings += (sender, e) =>

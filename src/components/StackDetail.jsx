@@ -65,7 +65,7 @@ export function StackDetail({
             <button type="button" className="soft-btn" onClick={() => onOpenQueue?.()}>
               <Printer size={16} /> 本机打印
             </button>
-            <button type="button" className="soft-btn" onClick={() => onOpenPreferences?.(item?.printer || '')}>
+            <button type="button" className="soft-btn" onClick={() => onOpenPreferences?.(item?.printer || '', item)}>
               首选项
             </button>
             <label className="scheme-inline">

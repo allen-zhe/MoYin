@@ -284,7 +284,7 @@ export function PrintSettings({ open, state, items, printers, onClose, onUpdateI
                   </span>
                 </td>
                 <td className="ops-cell">
-                  <button type="button" className="row-op row-op-text" title="打印机首选项" onClick={() => onOpenPreferences?.(item.printer || '')}>首选项</button>
+                  <button type="button" className="row-op row-op-text" title="打印机首选项" onClick={() => onOpenPreferences?.(item.printer || '', item)}>首选项</button>
                   <button type="button" className="row-op" title="复制项目" onClick={() => onDuplicateItem?.(item.id)}><Copy size={13} /></button>
                   <button type="button" className="row-op danger" title="删除项目" onClick={() => onDeleteItem?.(item.id)}><Trash2 size={13} /></button>
                 </td>

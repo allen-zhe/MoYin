@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('cloudPrint', {
   init: () => ipcRenderer.invoke('app:init'),
   saveState: (state) => ipcRenderer.invoke('state:save', state),
   listPrinters: () => ipcRenderer.invoke('printers:list'),
-  openPrinterPreferences: (name) => ipcRenderer.invoke('printer:preferences', name),
+  openPrinterPreferences: (name, context) => ipcRenderer.invoke('printer:preferences', name, context || {}),
   pickFolder: (opts) => ipcRenderer.invoke('dialog:folder', opts || {}),
   pickFiles: (opts) => ipcRenderer.invoke('dialog:files', opts || {}),
   statFiles: (paths) => ipcRenderer.invoke('files:stat', paths),

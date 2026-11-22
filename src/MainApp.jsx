@@ -279,10 +279,27 @@ export function MainApp() {
   const detailStack = useMemo(() => state?.stacks?.find((s) => s.id === detailId) || null, [state?.stacks, detailId]);
   const defaultPrinter = printers.find((p) => p.isDefault) || printers[0];
 
-  const openPrinterPreferences = useCallback(async (name) => {
+  const openPrinterPreferences = useCallback(async (name, target = null) => {
     if (name === VIRTUAL_PDF_NAME) return notify('PDF 检查机是应用内虚拟输出，不需要驱动首选项。', 'info');
-    const res = await window.cloudPrint.openPrinterPreferences?.(name || '');
-    if (!res?.ok) notify(res?.error || '无法打开打印机首选项，请确认已安装打印机驱动。', 'error');
+    const context = target ? {
+      paper: target.paper,
+      duplex: target.duplex,
+      color: target.color,
+      landscape: target.orientation === 'landscape',
+      devmode: target.devmode || '',
+    } : {};
+    const res = await window.cloudPrint.openPrinterPreferences?.(name || '', context);
+    if (res?.canceled) return;
+    if (!res?.ok) return notify(res?.error || '无法打开打印机首选项，请确认已安装打印机驱动。', 'error');
+    if (target?.id && res.devmode) {
+      patchSchemeItem(target.id, {
+        devmode: res.devmode,
+        ...(res.paper ? { paper: res.paper } : {}),
+        ...(res.duplex ? { duplex: res.duplex } : {}),
+        ...(res.color ? { color: res.color } : {}),
+      });
+      notify('已记住这台打印机的首选项，打印时会按这里的设置出纸', 'success');
+    }
   }, [notify]);
 
   const refreshReceive = useCallback(async (port) => {
@@ -610,13 +627,14 @@ export function MainApp() {
   }
 
   function patchSchemeItem(itemId, patch) {
+    const clearsDevmode = !patch.devmode && ['paper', 'duplex', 'color', 'printer'].some((k) => k in patch);
     setState((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         schemes: prev.schemes.map((s) => s.id === prev.activeSchemeId ? ({
           ...s,
-          items: s.items.map((i) => i.id === itemId ? { ...i, ...patch } : i),
+          items: s.items.map((i) => i.id === itemId ? ({ ...i, ...patch, ...(clearsDevmode ? { devmode: '' } : {}) }) : i),
         }) : s),
       };
     });

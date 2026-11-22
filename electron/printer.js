@@ -109,6 +109,11 @@ async function printImages(job, context = {}) {
       images: imagePaths,
     };
     if (job.outputFile) config.outputFile = job.outputFile;
+    if (job.devmode) {
+      const devmodeFile = path.join(dir, 'devmode.bin');
+      fs.writeFileSync(devmodeFile, Buffer.from(String(job.devmode), 'base64'));
+      config.devmodeFile = devmodeFile;
+    }
     const configFile = path.join(dir, 'job.json');
     fs.writeFileSync(configFile, JSON.stringify(config), 'utf8');
     if (context.onProgress) context.onProgress({ stage: 'spooling', percent: 35, printer: config.printer });

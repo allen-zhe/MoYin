@@ -211,6 +211,7 @@ export async function executePrint({ html, images, orientations, item, copies, p
       color: item.color !== 'mono',
       landscape: !!landscape,
       orientations: orientations || [],
+      devmode: item.devmode || '',
       simulate: !!simulate,
     });
     if (result && result.ok) return result;

@@ -6,7 +6,7 @@ const {
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const { pathToFileURL } = require('url');
 const { read: readState, save: saveState, flush: flushStore, dataDir } = require('./store');
 const { printHtml, printImages, imagesToHtml, listPrinters, listStatus } = require('./printer');
@@ -356,7 +356,7 @@ function registerIpc() {
 
   ipcMain.handle('printers:list', () => listStatus(mainWindow));
 
-  ipcMain.handle('printer:preferences', async (_e, printerName) => {
+  ipcMain.handle('printer:preferences', async (_e, printerName, context = {}) => {
     try {
       const printers = await listPrinters(mainWindow);
       const target = printerName
@@ -364,15 +364,50 @@ function registerIpc() {
         : printers.find((p) => p.isDefault) || printers[0];
       if (!target) return { ok: false, error: '没有找到可用的打印机。' };
       const helper = prefsHelperPath();
-      const child = helper
-        ? spawn(helper, [target.name], { detached: true, stdio: 'ignore', windowsHide: false })
-        : spawn('rundll32.exe', ['printui.dll,PrintUIEntry', '/e', '/n', target.name], {
-          detached: true,
-          stdio: 'ignore',
-          windowsHide: false,
+      if (!helper) {
+        const child = spawn('rundll32.exe', ['printui.dll,PrintUIEntry', '/e', '/n', target.name], {
+          detached: true, stdio: 'ignore', windowsHide: false,
         });
-      child.unref();
-      return { ok: true, printer: target.name };
+        child.unref();
+        return { ok: true, printer: target.name };
+      }
+
+      const dir = fs.mkdtempSync(path.join(app.getPath('temp'), 'moprint-prefs-'));
+      try {
+        const outFile = path.join(dir, 'out.bin');
+        let inFile = '';
+        if (context?.devmode) {
+          inFile = path.join(dir, 'in.bin');
+          fs.writeFileSync(inFile, Buffer.from(String(context.devmode), 'base64'));
+        }
+        const args = [
+          target.name,
+          outFile,
+          context.paper || 'A4',
+          context.duplex || 'simplex',
+          context.color || 'color',
+          context.landscape ? 'landscape' : 'portrait',
+        ];
+        if (inFile) args.push(inFile);
+
+        const run = await new Promise((resolve) => {
+          execFile(helper, args, { windowsHide: false, timeout: 600000, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
+            resolve({ err, stdout: String(stdout || ''), stderr: String(stderr || '') });
+          });
+        });
+
+        const line = run.stdout.trim().split(/\r?\n/).filter(Boolean).pop() || '';
+        if (line) {
+          try {
+            const parsed = JSON.parse(line);
+            return { ...parsed, printer: target.name };
+          } catch { /* fall through */ }
+        }
+        if (run.err) return { ok: false, error: (run.stderr || run.err.message || '无法打开打印机首选项').trim() };
+        return { ok: true, printer: target.name };
+      } finally {
+        try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+      }
     } catch (err) {
       return { ok: false, error: err.message || String(err) };
     }
