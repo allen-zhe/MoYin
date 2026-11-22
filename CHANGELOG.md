@@ -1,5 +1,12 @@
 # 更新记录
 
+## 1.1.1
+
+- **WPS 支持**：Office 转换新增 WPS 引擎（`KWPS/KET/KWPP.Application`），与 Microsoft Office 使用同一套调用方式。
+- 引擎策略：「自动」先试 Microsoft Office，失败再用 WPS（每次独立进程，避免两个套件互相污染）；也可在设置里固定为「仅 Office」或「仅 WPS」。
+- 仍保留 LibreOffice 作为最后回退；三种引擎都没有时给出明确提示。
+- 已用本机 Office 与 WPS 分别验证 docx / pptx / xlsx 转 PDF（页数、内容正常）。
+
 ## 1.1.0
 
 - **Word / Excel / PowerPoint 直接打印**：参考印广云的思路，Office 文档先由文档核心转成 PDF，再走现有的 300DPI 渲染与打印管线。支持 `.doc/.docx/.rtf`、`.xls/.xlsx/.xlsm/.csv`、`.ppt/.pptx/.pptm`。

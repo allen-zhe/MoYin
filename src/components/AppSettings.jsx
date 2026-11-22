@@ -85,6 +85,13 @@ export function AppSettings({ open, settings, receive, onClose, onChange, onPick
               <Row label="文件目录" hint={settings.watchDir || '未选择，接收和手动导入仍然可用'}>
                 <Button variant="ghost" size="sm" icon={FolderOpen} onClick={onPickDir}>选择文件夹</Button>
               </Row>
+              <Row label="Office 转换引擎" hint="Word/Excel/PPT 转 PDF 用；自动＝先 Office 再 WPS">
+                <Select value={settings.officeEngine || 'auto'} onChange={(e) => update({ officeEngine: e.target.value })}>
+                  <option value="auto">自动（Office → WPS）</option>
+                  <option value="office">仅 Microsoft Office</option>
+                  <option value="wps">仅 WPS</option>
+                </Select>
+              </Row>
             </>
           ) : null}
 

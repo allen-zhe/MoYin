@@ -8,7 +8,7 @@
 - **文件堆叠**：手动新建、拖拽导入、目录监听、按时间窗口自动归堆。
 - **12 个快捷档位**：A4/A3、黑白/彩色、单面/双面短翻/长翻，拖入文件即可打印。
 - **PDF / 图片 / 文本**：PDF 页数、缩略图、页码范围、跳过空白页；JPG/PNG/WEBP/BMP/GIF/TIFF；TXT 自动分页。
-- **Word / Excel / PPT**：支持 `.doc/.docx/.rtf`、`.xls/.xlsx/.csv`、`.ppt/.pptx`，先转 PDF 再按现有管线渲染打印；优先 Microsoft Office，未安装时回退 LibreOffice。
+- **Word / Excel / PPT**：支持 `.doc/.docx/.rtf`、`.xls/.xlsx/.csv`、`.ppt/.pptx`，先转 PDF 再按现有管线渲染打印；自动选择 Microsoft Office 或 WPS，最后回退 LibreOffice。
 - **长图分割**：把一张超长图片按 A4/A3 切成多页，可设置页间重叠。
 - **文件拼版**：A4 拼到 A3（自动识别横竖）、小册子、多页合一（2/4/6/9 页，方向随成品纸张）、重复拼版。
 - **打印设置**：价格方案、单价、颜色、纸张、单双面、方向、打印机分配、导入/导出、批量编辑、Excel 式列宽调节。
@@ -66,7 +66,7 @@ npm run dist         # 生成安装版 + 便携版
 
 ## 安装版
 
-安装包位于 `release/墨印-1.1.0-安装版.exe`：
+安装包位于 `release/墨印-1.1.1-安装版.exe`：
 
 - 显示 AGPLv3 许可页，必须同意后才能继续；
 - 可自由选择安装目录；
@@ -74,7 +74,7 @@ npm run dist         # 生成安装版 + 便携版
 - 安装时静默尝试启动 Windows 打印后台服务并创建 `%APPDATA%\moprint` 数据目录；
 - Electron 自带 Chromium/Node 运行时，无需额外安装 WebView2 或 .NET。
 
-便携版：`release/墨印-1.1.0-便携版.exe`，双击运行。
+便携版：`release/墨印-1.1.1-便携版.exe`，双击运行。
 
 ## 手机传输
 

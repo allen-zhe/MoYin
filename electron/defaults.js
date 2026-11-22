@@ -31,6 +31,7 @@ function createDefaultState() {
       autoStart: false,
       watchDir: '',
       watchPaused: false,
+      officeEngine: 'auto',
       erpEnabled: false,
       erpEndpoint: '',
       erpToken: '',

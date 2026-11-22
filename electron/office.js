@@ -1,7 +1,7 @@
 'use strict';
 
 // Office 文档转换：Word / Excel / PowerPoint → PDF，再交给现有 PDF 渲染管线。
-// 优先调用本机 Microsoft Office（COM，保真度最高），失败或未安装时回退 LibreOffice。
+// 依次尝试：Microsoft Office（COM）→ WPS（COM，独立进程）→ LibreOffice。
 
 const fs = require('fs');
 const path = require('path');
@@ -37,12 +37,12 @@ function cachePathFor(file) {
   return path.join(cacheDir(), `${key}.pdf`);
 }
 
-function runCom(helper, input, output) {
+function runCom(helper, engine, input, output) {
   return new Promise((resolve, reject) => {
-    execFile(helper, [input, output], { windowsHide: true, timeout: CONVERT_TIMEOUT, maxBuffer: 2 * 1024 * 1024 }, (err, _stdout, stderr) => {
+    execFile(helper, [input, output, engine], { windowsHide: true, timeout: CONVERT_TIMEOUT, maxBuffer: 2 * 1024 * 1024 }, (err, _stdout, stderr) => {
       if (err) {
         const msg = String(stderr || err.message || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
-        reject(new Error(msg || 'Office 转换失败'));
+        reject(new Error(msg || `${engine} 转换失败`));
         return;
       }
       resolve();
@@ -83,27 +83,30 @@ function runLibreOffice(soffice, input, output) {
   });
 }
 
-async function convertOffice(file) {
+function engineList(preferred) {
+  const value = String(preferred || 'auto').toLowerCase();
+  if (value === 'office' || value === 'wps') return [value];
+  return ['office', 'wps'];
+}
+
+async function convertOffice(file, preferredEngine = 'auto') {
   if (!isOfficePath(file)) throw new Error('不是可转换的 Office 文件');
   if (!fs.existsSync(file)) throw new Error('文件不存在');
   const output = cachePathFor(file);
   if (fs.existsSync(output) && fs.statSync(output).size > 0) return output;
 
-  const partial = `${output}.tmp.pdf`;
-  try { if (fs.existsSync(partial)) fs.unlinkSync(partial); } catch { /* ignore */ }
-
-  const errors = [];
   const helper = helperPath();
+  const errors = [];
+
   if (helper) {
-    try {
-      await runCom(helper, file, partial);
-      if (fs.existsSync(partial) && fs.statSync(partial).size > 0) {
-        fs.renameSync(partial, output);
-        return output;
+    for (const engine of engineList(preferredEngine)) {
+      try {
+        await runCom(helper, engine, file, output);
+        if (fs.existsSync(output) && fs.statSync(output).size > 0) return output;
+        errors.push(`${engine}：未生成 PDF`);
+      } catch (err) {
+        errors.push(`${engine}：${err.message}`);
       }
-      errors.push('Office 转换未生成文件');
-    } catch (err) {
-      errors.push(`Microsoft Office：${err.message}`);
     }
   } else {
     errors.push('未找到内置 Office 转换组件');
@@ -112,12 +115,9 @@ async function convertOffice(file) {
   const soffice = findSoffice();
   if (soffice) {
     try {
-      await runLibreOffice(soffice, file, partial);
-      if (fs.existsSync(partial) && fs.statSync(partial).size > 0) {
-        fs.renameSync(partial, output);
-        return output;
-      }
-      errors.push('LibreOffice 转换未生成文件');
+      await runLibreOffice(soffice, file, output);
+      if (fs.existsSync(output) && fs.statSync(output).size > 0) return output;
+      errors.push('LibreOffice：未生成 PDF');
     } catch (err) {
       errors.push(`LibreOffice：${err.message}`);
     }
@@ -125,8 +125,7 @@ async function convertOffice(file) {
     errors.push('未安装 LibreOffice');
   }
 
-  try { if (fs.existsSync(partial)) fs.unlinkSync(partial); } catch { /* ignore */ }
-  throw new Error(`无法转换 ${path.basename(file)}。${errors.join('；')}。请安装 Microsoft Office 或 LibreOffice。`);
+  throw new Error(`无法转换 ${path.basename(file)}。${errors.join('；')}。请安装 Microsoft Office、WPS 或 LibreOffice。`);
 }
 
 async function countPdfPages(pdfPath) {
@@ -140,8 +139,8 @@ async function countPdfPages(pdfPath) {
   }
 }
 
-async function prepareOfficeFile(filePath) {
-  const pdfPath = await convertOffice(filePath);
+async function prepareOfficeFile(filePath, preferredEngine = 'auto') {
+  const pdfPath = await convertOffice(filePath, preferredEngine);
   const pages = await countPdfPages(pdfPath);
   return { pdfPath, pages };
 }

@@ -273,6 +273,10 @@ function stopWatcher() {
   }
 }
 
+function officeEngineSetting() {
+  try { return readState().settings.officeEngine || 'auto'; } catch { return 'auto'; }
+}
+
 async function statFile(filePath) {
   const stat = await fs.promises.stat(filePath);
   const ext = path.extname(filePath).toLowerCase();
@@ -289,7 +293,7 @@ async function statFile(filePath) {
   };
   if (isOfficePath(filePath)) {
     try {
-      const converted = await prepareOfficeFile(filePath);
+      const converted = await prepareOfficeFile(filePath, officeEngineSetting());
       info.convertedPdf = converted.pdfPath;
       info.pages = converted.pages || null;
       info.officeEngine = 'auto';
@@ -435,7 +439,7 @@ function registerIpc() {
 
   ipcMain.handle('office:convert', async (_e, filePath) => {
     try {
-      const pdfPath = await convertOffice(filePath);
+      const pdfPath = await convertOffice(filePath, officeEngineSetting());
       return { ok: true, pdfPath };
     } catch (err) {
       return { ok: false, error: normalizeError(err) };
