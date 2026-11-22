@@ -13,3 +13,4 @@ build/MoPrint.PrintCaps.exe
 build/MoPrint.PrintJob.exe
 .idea/
 .vscode/
+build/MoPrint.OfficeConv.exe

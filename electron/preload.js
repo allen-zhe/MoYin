@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('cloudPrint', {
   pickFolder: (opts) => ipcRenderer.invoke('dialog:folder', opts || {}),
   pickFiles: (opts) => ipcRenderer.invoke('dialog:files', opts || {}),
   statFiles: (paths) => ipcRenderer.invoke('files:stat', paths),
+  convertOffice: (path) => ipcRenderer.invoke('office:convert', path),
   readFile: (path) => ipcRenderer.invoke('files:read', path),
   fileExists: (path) => ipcRenderer.invoke('files:exists', path),
   createStackFolder: (opts) => ipcRenderer.invoke('files:create-stack-folder', opts),

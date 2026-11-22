@@ -171,6 +171,12 @@ export function isPdf(file) {
   return String(file.ext || '').toLowerCase() === 'pdf';
 }
 
+export const OFFICE_EXTS = ['doc', 'docx', 'rtf', 'xls', 'xlsx', 'xlsm', 'csv', 'ppt', 'pptx', 'pptm'];
+
+export function isOffice(file) {
+  return OFFICE_EXTS.includes(String(file.ext || '').toLowerCase());
+}
+
 export function clearCaches() {
   docCache.clear();
   thumbCache.clear();

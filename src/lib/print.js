@@ -1,4 +1,4 @@
-import { renderPdfPages, renderImagePage, isPdf, isImage, toLocalUrl } from './pdf.js';
+import { renderPdfPages, renderImagePage, isPdf, isImage, isOffice, toLocalUrl } from './pdf.js';
 import { filePages } from './format.js';
 import { VIRTUAL_PDF_NAME } from './virtualPrinter.js';
 
@@ -82,6 +82,15 @@ export async function renderFilePages(file, item, { dpi = 300, range = '', onPro
   const ext = String(file.ext || '').toLowerCase();
   if (ext === 'pdf') {
     return renderPdfPages(file.path, { dpi, range, onPage: (n, total) => onProgress?.(n, total) });
+  }
+  if (isOffice(file)) {
+    let pdfPath = file.convertedPdf;
+    if (!pdfPath) {
+      const res = await window.cloudPrint.convertOffice(file.path);
+      if (!res?.ok) throw new Error(res?.error || 'Office 文档转换失败');
+      pdfPath = res.pdfPath;
+    }
+    return renderPdfPages(pdfPath, { dpi, range, onPage: (n, total) => onProgress?.(n, total) });
   }
   if (ext === 'txt') {
     return renderTextPages(file, item, dpi);

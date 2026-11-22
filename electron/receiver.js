@@ -110,7 +110,7 @@ function mobilePage(token) {
         <button class="btn ghost" id="camera">拍照扫描</button>
       </div>
       <div class="hint">也可以把文件拖到这里</div>
-      <input type="file" id="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp,.gif,.tif,.tiff,.txt">
+      <input type="file" id="file" multiple hidden accept=".pdf,.doc,.docx,.rtf,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.pptm,.jpg,.jpeg,.png,.webp,.bmp,.gif,.tif,.tiff,.txt">
       <input type="file" id="photo" accept="image/*" capture="environment" hidden>
     </div>
     <div class="files" id="list"></div>

@@ -12,6 +12,7 @@ const { read: readState, save: saveState, flush: flushStore, dataDir } = require
 const { printHtml, printImages, imagesToHtml, listPrinters, listStatus } = require('./printer');
 const { ReceiveServer } = require('./receiver');
 const { exportImagesPdf } = require('./pdfExport');
+const { OFFICE_EXT, isOfficePath, convertOffice, prepareOfficeFile } = require('./office');
 const chokidar = require('chokidar');
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -50,7 +51,7 @@ const MIME = {
   '.pdf': 'application/pdf', '.svg': 'image/svg+xml',
 };
 
-const SUPPORTED_EXT = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tif', '.tiff', '.txt']);
+const SUPPORTED_EXT = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tif', '.tiff', '.txt', ...OFFICE_EXT]);
 
 function makeId(prefix = '') {
   return `${prefix}${crypto.randomUUID()}`;
@@ -275,7 +276,7 @@ function stopWatcher() {
 async function statFile(filePath) {
   const stat = await fs.promises.stat(filePath);
   const ext = path.extname(filePath).toLowerCase();
-  return {
+  const info = {
     id: makeId('f_'),
     name: path.basename(filePath),
     path: filePath,
@@ -286,6 +287,18 @@ async function statFile(filePath) {
     pages: ext === '.pdf' ? null : 1,
     addedAt: Date.now(),
   };
+  if (isOfficePath(filePath)) {
+    try {
+      const converted = await prepareOfficeFile(filePath);
+      info.convertedPdf = converted.pdfPath;
+      info.pages = converted.pages || null;
+      info.officeEngine = 'auto';
+    } catch (err) {
+      info.convertError = normalizeError(err);
+      info.pages = null;
+    }
+  }
+  return info;
 }
 
 function normalizeError(err) {
@@ -375,7 +388,7 @@ function registerIpc() {
       title: opts.title || '选择要打印的文件',
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: '可打印文件', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'txt'] },
+        { name: '可打印文件', extensions: ['pdf', 'doc', 'docx', 'rtf', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'txt'] },
         { name: '所有文件', extensions: ['*'] },
       ],
     });
@@ -418,6 +431,15 @@ function registerIpc() {
 
   ipcMain.handle('files:exists', async (_e, filePath) => {
     try { return (await fs.promises.stat(filePath)).isFile(); } catch { return false; }
+  });
+
+  ipcMain.handle('office:convert', async (_e, filePath) => {
+    try {
+      const pdfPath = await convertOffice(filePath);
+      return { ok: true, pdfPath };
+    } catch (err) {
+      return { ok: false, error: normalizeError(err) };
+    }
   });
 
   ipcMain.handle('files:create-stack-folder', async (_e, { parent, name }) => {

@@ -17,8 +17,8 @@ export function FileThumb({ file, width = 320, className = '', fit = 'contain' }
       setSrc(toLocalUrl(file.path));
       return undefined;
     }
-    if (ext === 'pdf') {
-      renderPdfThumb(file.path, width)
+    if (ext === 'pdf' || file.convertedPdf) {
+      renderPdfThumb(file.convertedPdf || file.path, width)
         .then((url) => { if (!cancelled) setSrc(url); })
         .catch(() => { if (!cancelled) setFailed(true); });
       return () => { cancelled = true; };

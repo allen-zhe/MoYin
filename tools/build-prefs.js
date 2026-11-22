@@ -14,6 +14,7 @@ const jobs = [
   { source: 'PrintPrefs.cs', out: 'MoPrint.PrintPrefs.exe', target: 'winexe', refs: ['System.Windows.Forms.dll'] },
   { source: 'PrintCaps.cs', out: 'MoPrint.PrintCaps.exe', target: 'exe', refs: ['System.Drawing.dll', 'System.Web.Extensions.dll'] },
   { source: 'PrintJob.cs', out: 'MoPrint.PrintJob.exe', target: 'exe', refs: ['System.Drawing.dll', 'System.Web.Extensions.dll'] },
+  { source: 'OfficeConv.cs', out: 'MoPrint.OfficeConv.exe', target: 'exe', refs: ['Microsoft.CSharp.dll'] },
 ];
 
 if (!csc) {
