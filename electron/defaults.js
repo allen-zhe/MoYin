@@ -46,6 +46,7 @@ function createDefaultState() {
       receiveEnabled: true,
       receivePort: 18666,
       alwaysOnTop: false,
+      quickAlwaysOnTop: false,
       simulatePrint: false,
       labelPrinter: '',
       labelPaper: 'A4',

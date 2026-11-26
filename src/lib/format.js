@@ -90,9 +90,18 @@ export function sheetsFor(pages, duplex) {
   return duplex && duplex !== 'simplex' ? Math.ceil(n / 2) : n;
 }
 
+export function unitLabel(item) {
+  return item?.unit || '面';
+}
+
+export function billingCount(pages, item) {
+  const n = Math.max(0, Number(pages) || 0);
+  return unitLabel(item) === '张' ? sheetsFor(n, item?.duplex) : n;
+}
+
 export function amountForPages(pages, item) {
-  const sheets = sheetsFor(pages, item?.duplex);
-  return Math.round(sheets * (Number(item?.price) || 0) * 100) / 100;
+  const count = billingCount(pages, item);
+  return Math.round(count * (Number(item?.price) || 0) * 100) / 100;
 }
 
 export function stackAmount(stack, item) {

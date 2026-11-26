@@ -196,6 +196,7 @@ function createQuickWindow() {
     : pathToFileURL(path.join(ROOT, 'dist', 'index.html')).toString();
   quickWindow.loadURL(`${base}${base.includes('#') ? '' : '#quick'}`);
   quickWindow.once('ready-to-show', () => {
+    try { quickWindow.setAlwaysOnTop(!!readState().settings.quickAlwaysOnTop); } catch { /* ignore */ }
     quickWindow.show();
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('quick:window', { open: true });
   });
@@ -347,12 +348,15 @@ async function quoteReceiveOrder(files, contact) {
     || list.find((i) => i.paper === contact.paper && i.color === contact.color)
     || list.find((i) => i.paper === contact.paper)
     || list[0];
-  const unit = Number(item?.price) || 0;
-  const amount = Math.round(pages * unit * 100) / 100;
+  const unit = item?.unit || '面';
+  const price = Number(item?.price) || 0;
+  const billable = unit === '张' ? Math.ceil(pages / 2) : pages;
+  const amount = Math.round(billable * price * 100) / 100;
   return {
     no: `M${Date.now().toString(36).toUpperCase().slice(-6)}`,
     pages,
     unit,
+    price,
     amount,
     paper: contact.paper,
     color: contact.color,
@@ -653,6 +657,15 @@ function registerIpc() {
   ipcMain.handle('window:is-maximized', () => !!mainWindow?.isMaximized());
   ipcMain.handle('quick:window-close', () => quickWindow?.close());
   ipcMain.handle('quick:window-minimize', () => quickWindow?.minimize());
+  ipcMain.handle('quick:set-always-on-top', (_e, value) => {
+    const pinned = !!value;
+    try { if (quickWindow && !quickWindow.isDestroyed()) quickWindow.setAlwaysOnTop(pinned); } catch { /* ignore */ }
+    try {
+      const st = readState();
+      saveState({ ...st, settings: { ...st.settings, quickAlwaysOnTop: pinned } });
+    } catch { /* ignore */ }
+    return { ok: true, value: pinned };
+  });
 
   ipcMain.handle('app:set-auto-start', (_e, enabled) => {
     app.setLoginItemSettings({ openAtLogin: !!enabled, path: launchPath() });

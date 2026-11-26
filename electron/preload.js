@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('cloudPrint', {
   scanWatch: () => ipcRenderer.invoke('watch:scan'),
   openQuickWindow: () => ipcRenderer.invoke('quick:open'),
   closeQuickWindow: () => ipcRenderer.invoke('quick:window-close'),
+  setQuickAlwaysOnTop: (value) => ipcRenderer.invoke('quick:set-always-on-top', value),
   minimizeQuickWindow: () => ipcRenderer.invoke('quick:window-minimize'),
   notifyQuickPrinted: (payload) => ipcRenderer.invoke('app:notify-quick', payload),
   notifyQuickCleared: () => ipcRenderer.invoke('app:notify-quick-cleared'),

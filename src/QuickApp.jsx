@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Minus, X, Printer, Smartphone } from 'lucide-react';
+import { Minus, X, Printer, Smartphone, Pin } from 'lucide-react';
 import { QuickPanel } from './components/QuickPanel.jsx';
 import { Logo } from './components/Logo.jsx';
 import { ToastStack, Spinner } from './components/ui.jsx';
@@ -13,6 +13,7 @@ export function QuickApp() {
   const [printers, setPrinters] = useState([]);
   const [quick, setQuick] = useState({ customer: '散客', amount: 0, copies: 1, count: 0, items: [] });
   const [printing, setPrinting] = useState(null);
+  const [pinned, setPinned] = useState(false);
   const [toasts, setToasts] = useState([]);
   const stateRef = useRef(null);
 
@@ -29,6 +30,7 @@ export function QuickApp() {
         setData(boot);
         stateRef.current = boot.state;
         setQuick(boot.state.quick || quick);
+        setPinned(!!boot.state.settings?.quickAlwaysOnTop);
         const scheme = boot.state.schemes.find((s) => s.id === boot.state.activeSchemeId) || boot.state.schemes[0];
         setItems(scheme.items.slice(0, 12));
         setPrinters(withVirtualPrinter(await window.cloudPrint.listPrinters()));
@@ -123,6 +125,20 @@ export function QuickApp() {
       <div className="titlebar quick-titlebar" onDoubleClick={() => {}}>
         <div className="titlebar-brand"><Logo size={18} /><span>快捷打印</span><span className="titlebar-ver">独立窗口</span></div>
         <div className="titlebar-actions">
+          <button
+            type="button"
+            className={`pin-btn ${pinned ? 'on' : ''}`}
+            aria-pressed={pinned}
+            aria-label="窗口置顶"
+            title={pinned ? '取消置顶' : '窗口置顶'}
+            onClick={async () => {
+              const next = !pinned;
+              setPinned(next);
+              await window.cloudPrint.setQuickAlwaysOnTop?.(next);
+            }}
+          >
+            <Pin size={14} />
+          </button>
           <button type="button" aria-label="最小化" onClick={() => window.cloudPrint.minimizeQuickWindow()}><Minus size={15} /></button>
           <button type="button" className="close" aria-label="关闭" onClick={() => window.cloudPrint.closeQuickWindow()}><X size={16} /></button>
         </div>

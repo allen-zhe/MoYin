@@ -54,8 +54,9 @@ export function AppSettings({ open, settings, receive, onClose, onChange, onPick
               <h4>堆叠显示</h4>
               <Row label="重复文件标红" hint="同一文件路径或同名文件在其他堆叠中出现时标红"><Toggle checked={settings.duplicateHighlight} onChange={(v) => update({ duplicateHighlight: v })} label="重复文件标红" /></Row>
               <h4>输出质量</h4>
-              <Row label="PDF / 图片渲染分辨率" hint="300 DPI 为默认高清；600 DPI 更清晰但渲染更慢、占用更多内存">
-                <Select value={String(settings.pdfDpi || 300)} onChange={(e) => update({ pdfDpi: Number(e.target.value) })} className="quality-select">
+              <Row label="PDF / 图片渲染分辨率" hint="自动：文档 300 DPI、照片 600 DPI，兼顾速度与清晰度">
+                <Select value={String(settings.pdfDpi || 300)} onChange={(e) => update({ pdfDpi: e.target.value === 'auto' ? 'auto' : Number(e.target.value) })} className="quality-select">
+                  <option value="auto">自动（文档 300 / 照片 600）</option>
                   <option value="150">150 DPI（标准）</option>
                   <option value="300">300 DPI（高清，推荐）</option>
                   <option value="600">600 DPI（超高清，较慢）</option>

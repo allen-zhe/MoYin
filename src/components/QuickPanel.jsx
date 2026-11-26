@@ -104,7 +104,7 @@ export function QuickPanel({
             </div>
             <div className="quick-slot-bottom">
               <span className="slot-spec">{item.paper} · {item.duplex === 'simplex' ? '单面' : item.duplex === 'shortEdge' ? '双面短边翻' : '双面长边翻'}</span>
-              <span className="slot-price">{money(item.price)}<em>/面</em></span>
+              <span className="slot-price">{money(item.price)}<em>/{item.unit || '面'}</em></span>
             </div>
             <div className="quick-slot-drop">
               <PackagePlus size={15} />

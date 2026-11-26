@@ -84,28 +84,56 @@ function parsePageRange(range, total, fallbackAll = true) {
   return [...pages].sort((a, b) => a - b);
 }
 
+const pageCache = new Map();
+const PAGE_CACHE_MAX = 96;
+
+async function renderPdfPage(doc, pageNo, dpi) {
+  const page = await doc.getPage(pageNo);
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(8.34, Math.max(1, dpi / 72));
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(viewport.width));
+  canvas.height = Math.max(1, Math.round(viewport.height));
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
+  const analysis = analyzeCanvas(canvas);
+  const dataUrl = canvas.toDataURL('image/png');
+  return { page: pageNo, dataUrl, width: base.width, height: base.height, blank: analysis.blank, coverage: analysis.coverage };
+}
+
 export async function renderPdfPages(path, { dpi = 300, range = '', onPage } = {}) {
   const doc = await loadDoc(path);
   const pages = parsePageRange(range, doc.numPages);
-  const out = [];
-  for (let i = 0; i < pages.length; i += 1) {
-    const pageNo = pages[i];
-    const page = await doc.getPage(pageNo);
-    const base = page.getViewport({ scale: 1 });
-    const scale = Math.min(8.34, Math.max(1, dpi / 72));
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(viewport.width));
-    canvas.height = Math.max(1, Math.round(viewport.height));
-    const ctx = canvas.getContext('2d', { alpha: false });
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport, background: '#ffffff' }).promise;
-    const analysis = analyzeCanvas(canvas);
-    const dataUrl = canvas.toDataURL('image/png');
-    out.push({ page: pageNo, dataUrl, width: base.width, height: base.height, blank: analysis.blank, coverage: analysis.coverage });
-    if (onPage) onPage(i + 1, pages.length);
-  }
+  if (!pages.length) return [];
+  const out = new Array(pages.length);
+  let done = 0;
+  let cursor = 0;
+  // 高分辨率单页就占 100MB+ 位图，并行度按 DPI 收缩，避免爆内存。
+  const concurrency = dpi >= 600 ? 1 : dpi >= 450 ? 2 : 3;
+
+  const worker = async () => {
+    while (true) {
+      const i = cursor;
+      cursor += 1;
+      if (i >= pages.length) return;
+      const pageNo = pages[i];
+      const key = `${path}|${dpi}|${pageNo}`;
+      let result = pageCache.get(key);
+      if (!result) {
+        result = await renderPdfPage(doc, pageNo, dpi);
+        pageCache.set(key, result);
+        if (pageCache.size > PAGE_CACHE_MAX) pageCache.delete(pageCache.keys().next().value);
+      }
+      out[i] = result;
+      done += 1;
+      if (onPage) onPage(done, pages.length);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, pages.length) }, worker));
   return out;
 }
 
@@ -129,6 +157,8 @@ export function analyzeCanvas(canvas) {
 }
 
 export async function renderImagePage(path, dpi = 300) {
+  const key = `${path}|img|${dpi}`;
+  if (pageCache.has(key)) return pageCache.get(key);
   const url = toLocalUrl(path);
   const img = await loadImage(url);
   const maxWidth = Math.round((dpi / 25.4) * 297);
@@ -141,7 +171,10 @@ export async function renderImagePage(path, dpi = 300) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   const analysis = analyzeCanvas(canvas);
-  return { dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight, blank: analysis.blank, coverage: analysis.coverage };
+  const result = { dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight, blank: analysis.blank, coverage: analysis.coverage };
+  pageCache.set(key, result);
+  if (pageCache.size > PAGE_CACHE_MAX) pageCache.delete(pageCache.keys().next().value);
+  return result;
 }
 
 export function loadImage(src) {
@@ -180,5 +213,6 @@ export function isOffice(file) {
 export function clearCaches() {
   docCache.clear();
   thumbCache.clear();
+  pageCache.clear();
 }
 

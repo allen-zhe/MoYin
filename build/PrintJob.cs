@@ -130,9 +130,16 @@ internal static class PrintJob
                     string path = cfg.images[index];
                     using (var image = Image.FromFile(path))
                     {
-                        e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                        e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
+                        // 页面位图本来就按目标 DPI 生成，接近 1:1 时用最近邻最快；
+                        // 只有需要明显缩放时才用高质量插值。
+                        float sx = (float)e.PageBounds.Width / Math.Max(1, image.Width);
+                        float sy = (float)e.PageBounds.Height / Math.Max(1, image.Height);
+                        bool nearOneToOne = sx > 0.92f && sx < 1.08f && sy > 0.92f && sy < 1.08f;
+                        e.Graphics.InterpolationMode = nearOneToOne
+                            ? InterpolationMode.NearestNeighbor
+                            : InterpolationMode.HighQualityBilinear;
+                        e.Graphics.PixelOffsetMode = nearOneToOne ? PixelOffsetMode.HighSpeed : PixelOffsetMode.HighQuality;
+                        e.Graphics.SmoothingMode = SmoothingMode.None;
                         e.Graphics.DrawImage(image, e.PageBounds);
                     }
                     index += 1;

@@ -5,13 +5,13 @@ import {
 } from 'lucide-react';
 import { FileThumb } from './FileThumb.jsx';
 import { Toggle, Select, Button } from './ui.jsx';
-import { formatBytes, formatDate, money, stackAmount, stackPages, stackPrintState, amountForPages } from '../lib/format.js';
+import { formatBytes, formatDate, money, stackAmount, stackPages, stackPrintState, amountForPages, billingCount } from '../lib/format.js';
 import { printerFor, capabilitySummary } from '../lib/printerCaps.js';
 import { shouldMergePrint } from '../lib/print.js';
 
 export function StackDetail({
   stack, items, printers, settings, onClose, onPrint, onPrintLabel, onUpdateStack,
-  onUpdateItem, onReveal, onRemoveFile, onAddFiles, onArchive, onOpenQueue, onOpenPreferences, onOpenImposition, onDropPaths, onReorderItems, onMarkPaid, notify,
+  onUpdateItem, onReveal, onRemoveFile, onAddFiles, onArchive, onOpenQueue, onOpenPreferences, onOpenImposition, onDropPaths, onReorderItems, onReorderFiles, onMarkPaid, notify,
 }) {
   const [selected, setSelected] = useState(() => new Set((stack.files || []).map((f) => f.id)));
   const [itemId, setItemId] = useState(stack.itemId || items[0]?.id || '');
@@ -136,7 +136,7 @@ export function StackDetail({
               <span className="detail-item-cap">{capabilitySummary(printerFor(printers, cfg.printer))}</span>
               <span className="detail-item-meta">
                 <span>{cfg.paper} · {cfg.duplex === 'simplex' ? '单面' : cfg.duplex === 'shortEdge' ? '双面短边翻转' : '双面长边翻转'}</span>
-                <b>{money(cfg.price)}<em>/面</em></b>
+                <b>{money(cfg.price)}<em>/{cfg.unit || '面'}</em></b>
               </span>
             </div>
           ))}
@@ -147,7 +147,7 @@ export function StackDetail({
             <input type="checkbox" checked={allSelected} onChange={selectAll} />
             <span>全选</span>
           </label>
-          <span>拖动文件可复制到外部，多选可一起拖出；拖动 ⠿ 调整顺序</span>
+          <span>拖动文件可复制到外部，多选可一起拖出；拖动卡片可调整打印顺序</span>
           <span className="detail-file-count">已选 {selectedFiles.length} / {stack.files?.length || 0}</span>
         </div>
 
@@ -167,6 +167,24 @@ export function StackDetail({
                   key={file.id}
                   className={`detail-file ${selected.has(file.id) ? 'selected' : ''}`}
                   onClick={() => toggleFile(file.id)}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/x-moprint-file', file.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(e) => {
+                    if (e.dataTransfer.types.includes('application/x-moprint-file')) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }
+                  }}
+                  onDrop={(e) => {
+                    const from = e.dataTransfer.getData('application/x-moprint-file');
+                    if (!from || !onReorderFiles) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onReorderFiles(stack.id, from, file.id);
+                  }}
                   onContextMenu={(e) => {
                     if (Number(file.printed) <= 0 || stack.payment === 'paid') return;
                     e.preventDefault();
@@ -180,6 +198,7 @@ export function StackDetail({
                   onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleFile(file.id); } }}
                 >
                   <div className="detail-file-top">
+                    <span className="file-drag-handle" title="拖动调整文件顺序"><GripVertical size={12} /></span>
                     <span className={`check-dot ${selected.has(file.id) ? 'on' : ''}`}>{selected.has(file.id) ? <Check size={12} /> : null}</span>
                     <span className={`ext-badge ext-${String(file.ext).toLowerCase()}`}>{String(file.ext).toUpperCase()}</span>
                     <span className="detail-file-name" title={file.name}>{file.name}</span>
@@ -214,7 +233,7 @@ export function StackDetail({
             <div className="detail-summary">
               <b>{stack.title}</b>
               <span>· 已选 {selectedFiles.length} 个文件 · {copies} 份 · 共 {totalPages} 页</span>
-              <span className="summary-amount">已选中金额 {money(estimate)} <em>（当前方案价）</em></span>
+              <span className="summary-amount">已选中金额 {money(estimate)} <em>（{billingCount(totalPages, item)} {item?.unit || '面'} × {money(item?.price)}）</em></span>
               {item ? <span className="summary-config">· {item.name} · {printers.find((p) => p.name === item.printer)?.displayName || item.printer || printers.find((p) => p.isDefault)?.displayName || '系统默认打印机'}</span> : null}
               {stack.phone ? <span className="summary-config">· 手机 {stack.phone}</span> : null}
               {stack.quoteAmount != null ? <span className="summary-config">· 手机报价 {money(stack.quoteAmount)}</span> : null}

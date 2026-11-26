@@ -103,6 +103,11 @@ export async function renderFilePages(file, item, { dpi = 300, range = '', onPro
 
 export async function preparePrint(files, item, options = {}) {
   const { copies = 1, pageRange = '', skipBlank = false, onProgress, dpi = 300 } = options;
+  const dpiFor = (file) => {
+    if (dpi === 'auto') return isImage(file) ? 600 : 300;
+    const n = Number(dpi);
+    return Number.isFinite(n) && n > 0 ? n : 300;
+  };
   const pages = [];
   const fileSummaries = [];
   let coverageWeight = 0;
@@ -114,7 +119,7 @@ export async function preparePrint(files, item, options = {}) {
     let rendered = [];
     try {
       rendered = await renderFilePages(file, item, {
-        dpi,
+        dpi: dpiFor(file),
         range: pageRange,
         onProgress: (n, total) => onProgress?.({
           stage: 'render', fileIndex: fi, fileCount: files.length, name: file.name,

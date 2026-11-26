@@ -246,8 +246,7 @@ export function PrintSettings({ open, state, items, printers, onClose, onUpdateI
                   <select className="cell-select" value={item.unit || '面'} onChange={(e) => onUpdateItem?.(item.id, { unit: e.target.value })}>
                     <option value="面">面</option>
                     <option value="张">张</option>
-                    <option value="份">份</option>
-                  </select>
+                    <option value="份">份</option>                  </select>
                 </td>
                 <td>
                   <select className="cell-select" value={item.color} onChange={(e) => onUpdateItem?.(item.id, { color: e.target.value })}>

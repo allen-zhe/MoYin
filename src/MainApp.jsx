@@ -732,6 +732,26 @@ export function MainApp() {
     });
   }
 
+  function reorderStackFiles(stackId, fromId, toId) {
+    if (!stackId || !fromId || !toId || fromId === toId) return;
+    setState((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        stacks: prev.stacks.map((st) => {
+          if (st.id !== stackId) return st;
+          const files = (st.files || []).slice();
+          const from = files.findIndex((f) => f.id === fromId);
+          const to = files.findIndex((f) => f.id === toId);
+          if (from < 0 || to < 0) return st;
+          const [moved] = files.splice(from, 1);
+          files.splice(to, 0, moved);
+          return { ...st, files, updatedAt: Date.now() };
+        }),
+      };
+    });
+  }
+
   function duplicateSchemeItem(itemId) {
     setState((prev) => {
       if (!prev) return prev;
@@ -827,6 +847,16 @@ export function MainApp() {
       let coverageSum = 0;
       let lastResult = null;
       const virtualPaths = [];
+      const prepareBatch = (batch, bi) => preparePrint(batch, item, {
+        copies, pageRange: opts.pageRange || '', skipBlank: !!opts.skipBlank, dpi: state.settings.pdfDpi || 300,
+        onProgress: (p) => setPrinting((prev) => prev ? ({
+          ...prev, ...p, title: batches.length > 1 ? `正在准备打印 ${bi + 1}/${batches.length}` : '正在准备打印',
+          detail: p.name ? `${p.name} · ${p.page || 0}/${p.pageTotal || 0} 页` : prev.detail,
+        }) : prev),
+      });
+      // 先渲染下一个文件，等当前文件打印时它已经准备好，减少两张之间的空档。
+      let pending = prepareBatch(batches[0], 0);
+      pending.catch(() => {});
       for (let bi = 0; bi < batches.length; bi += 1) {
         const batch = batches[bi];
         const multi = batches.length > 1;
@@ -835,17 +865,17 @@ export function MainApp() {
         }
         let prepared;
         try {
-          prepared = await preparePrint(batch, item, {
-            copies, pageRange: opts.pageRange || '', skipBlank: !!opts.skipBlank, dpi: state.settings.pdfDpi || 300,
-            onProgress: (p) => setPrinting((prev) => prev ? ({
-              ...prev, ...p, title: multi ? `正在准备打印 ${bi + 1}/${batches.length}` : '正在准备打印',
-              detail: p.name ? `${p.name} · ${p.page || 0}/${p.pageTotal || 0} 页` : prev.detail,
-            }) : prev),
-          });
+          prepared = await pending;
         } catch (err) {
-          if (multi && /没有可打印的页面/.test(err.message || '')) continue;
+          if (multi && /没有可打印的页面/.test(err.message || '')) {
+            pending = bi + 1 < batches.length ? prepareBatch(batches[bi + 1], bi + 1) : null;
+            if (pending) pending.catch(() => {});
+            continue;
+          }
           throw err;
         }
+        pending = bi + 1 < batches.length ? prepareBatch(batches[bi + 1], bi + 1) : null;
+        if (pending) pending.catch(() => {});
         totalPages += prepared.pages;
         coverageSum += (prepared.coverage || 0) * (prepared.pages || 1);
         setPrinting((prev) => prev ? ({ ...prev, stage: 'spooling', percent: 80, title: '正在发送到打印机', detail: `${task.printer} · ${multi ? `第 ${bi + 1}/${batches.length} 个任务` : `覆盖率 ${((prepared.coverage || 0) * 100).toFixed(1)}%`}` }) : prev);
@@ -1407,7 +1437,7 @@ export function MainApp() {
           onOpenQueue={() => setQueueOpen(true)}
           onOpenPreferences={openPrinterPreferences}
           onDropPaths={(paths, id) => addPaths(paths, id)}
-          onReorderItems={reorderSchemeItems}
+          onReorderItems={reorderSchemeItems} onReorderFiles={reorderStackFiles}
           onMarkPaid={markPaid}
           onOpenImposition={(selectedFiles, mode) => setImposition({
             files: selectedFiles || detailStack.files || [],
