@@ -120,7 +120,11 @@ export function validateItem(item, printers) {
   if (!caps) return { ok: true, printer, unknown: true };
 
   if (item.color === 'color' && !caps.supportsColor) {
-    return { ok: false, printer, error: `打印机「${printer.displayName}」不支持彩色打印。` };
+    return {
+      ok: false,
+      printer,
+      error: `打印项「${item.name || ''}」是彩色，但打印机「${printer.displayName}」是黑白机。请在打印设置里把该项目改成黑白，或换成彩色打印机。`,
+    };
   }
   if (item.duplex && item.duplex !== 'simplex' && !caps.canDuplex) {
     return { ok: false, printer, error: `打印机「${printer.displayName}」不支持自动双面。` };

@@ -144,6 +144,40 @@ export function MainApp() {
     });
   }, [state?.settings.printerAssignVersion, printers]);
 
+  // 1.1.3 曾把驱动不回报 DM_COLOR 的黑白打印机误判成彩色并写回打印项，
+  // 导致「黑白项目 + 黑白打印机」被校验拦下。这里按打印机真实能力纠正一次。
+  useEffect(() => {
+    if (!state) return;
+    if ((state.settings.colorFixVersion || 0) >= 1) return;
+    // 等真实打印机能力就绪，避免只看到虚拟打印机就把版本标记掉。
+    if (!printers.some((p) => !p.virtual && p.capabilities)) return;
+
+    const fixes = [];
+    let unresolved = 0;
+    for (const scheme of state.schemes || []) {
+      for (const item of scheme.items || []) {
+        if (item.color !== 'color') continue;
+        const printer = item.printer
+          ? printers.find((p) => p.name === item.printer || p.displayName === item.printer)
+          : null;
+        const caps = printer?.capabilities;
+        if (!caps) { unresolved += 1; continue; }
+        if (!caps.supportsColor) fixes.push(item.id);
+      }
+    }
+    if (unresolved) return;
+
+    setState((prev) => {
+      if (!prev || (prev.settings.colorFixVersion || 0) >= 1) return prev;
+      const idSet = new Set(fixes);
+      const schemes = prev.schemes.map((scheme) => ({
+        ...scheme,
+        items: (scheme.items || []).map((item) => (idSet.has(item.id) ? { ...item, color: 'mono' } : item)),
+      }));
+      return { ...prev, schemes, settings: { ...prev.settings, colorFixVersion: 1 } };
+    });
+  }, [state, printers]);
+
   useEffect(() => {
     if (!state) return undefined;
     const id = setInterval(loadPrinters, 45000);

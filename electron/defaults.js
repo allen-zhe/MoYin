@@ -31,6 +31,7 @@ function createDefaultState() {
       autoStart: false,
       watchDir: '',
       watchPaused: false,
+      colorFixVersion: 0,
       receiveDir: '',
       officeEngine: 'auto',
       erpEnabled: false,

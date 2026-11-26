@@ -155,10 +155,22 @@ internal static class PrintPrefs
             Marshal.Copy(buffer, bytes, 0, size);
             File.WriteAllBytes(outFile, bytes);
 
-            string outDuplex = finalDm.dmDuplex == DMDUP_VERTICAL ? "longEdge"
-                : finalDm.dmDuplex == DMDUP_HORIZONTAL ? "shortEdge" : "simplex";
-            string outColor = finalDm.dmColor == DMCOLOR_MONOCHROME ? "mono" : "color";
-            string outPaper = PaperName(finalDm.dmPaperSize);
+            // 只回报驱动真正声明过的字段。黑白驱动常常不写 DM_COLOR，
+            // 此时 dmColor 是 0，若当成“彩色”回传会把打印项颜色改错。
+            string outDuplex = "";
+            if ((finalDm.dmFields & DM_DUPLEX) != 0)
+            {
+                outDuplex = finalDm.dmDuplex == DMDUP_VERTICAL ? "longEdge"
+                    : finalDm.dmDuplex == DMDUP_HORIZONTAL ? "shortEdge" : "simplex";
+            }
+            string outColor = "";
+            if ((finalDm.dmFields & DM_COLOR) != 0)
+            {
+                outColor = finalDm.dmColor == DMCOLOR_MONOCHROME ? "mono" : "color";
+            }
+            string outPaper = "";
+            if ((finalDm.dmFields & DM_PAPERSIZE) != 0) outPaper = PaperName(finalDm.dmPaperSize);
+            else if (finalDm.dmFields == 0 && finalDm.dmPaperSize > 0) outPaper = PaperName(finalDm.dmPaperSize);
 
             string json = "{"
                 + "\"ok\":true,"
